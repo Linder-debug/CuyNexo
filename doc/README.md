@@ -6,6 +6,9 @@ Materiales de referencia preparados el 22 de noviembre de 2026. Son propuestas d
 - [Presentación v0.3](2-CuyNexo_Presentacion_v0.3.pdf), 7 diapositivas.
 - [Infografía v2](3-CuyNexo_Infografia_v2.jpg).
 
+- [Arquitectura propuesta](arquitectura.md). G0 y stack pendientes.
+- [Diagrama de arquitectura](diagrama-arquitectura.md). Diseño P0, no implementado.
+
 ## Cómo interpretar estos materiales
 
 El stack y el reparto de tareas del plan son propuestas históricas y siguen pendientes de acuerdo del equipo. Las decisiones vigentes se registran en [decisions.md](../decisions.md); el alcance inicial resumido está en [spec.md](../spec.md).
