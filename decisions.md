@@ -29,7 +29,7 @@ Neteo fuera de cadena, consentimiento de la versión en la aplicación, liquidac
 
 ## Publicación y seguridad
 
-Publicar solo documentación saneada y datos sintéticos. No incluir claves, semillas, tokens, bases locales, información empresarial real, capturas privadas, conversaciones ni plan privado íntegro. Revisar cualquier evidencia futura antes de publicarla.
+Publicar solo documentación saneada y datos sintéticos. No incluir claves, semillas, tokens, bases locales, información empresarial real, capturas privadas, conversaciones ni materiales privados relacionados. La copia revisada del plan en `doc` excluye enlaces privados y conserva su estado de propuesta histórica. Revisar cualquier evidencia futura antes de publicarla.
 
 ## Checkpoint y entrega
 
