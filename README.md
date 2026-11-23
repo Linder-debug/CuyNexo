@@ -35,6 +35,8 @@ Las funciones a cubrir son producto y aceptación, implementación e integració
 - [Decisiones y límites](decisions.md)
 - El backlog se mantiene en los issues del repositorio, sin asignaciones iniciales.
 
+- [Arquitectura propuesta](doc/arquitectura.md) y [diagrama Mermaid](doc/diagrama-arquitectura.md). G0 y stack pendientes, sin implementación.
+
 ## Ejecución y evidencia
 
 Todavía no hay instrucciones de instalación o ejecución, aplicación desplegada, direcciones de testnet, hashes de prueba ni video demo. Se añadirán con evidencia real después de cerrar G0 y aprobar el desarrollo. La documentación no demuestra por sí sola atomicidad, recuperación ni funcionalidad.
