@@ -29,6 +29,8 @@ Las funciones a cubrir son producto y aceptación, implementación e integració
 
 ## Documentación
 
+- [Plan, presentación e infografía de referencia](doc/README.md). Materiales del 22 de noviembre de 2026, con notas de estado y copia del plan sin enlaces privados.
+
 - [Especificación inicial](spec.md)
 - [Decisiones y límites](decisions.md)
 - El backlog se mantiene en los issues del repositorio, sin asignaciones iniciales.
@@ -39,7 +41,7 @@ Todavía no hay instrucciones de instalación o ejecución, aplicación desplega
 
 ## Seguridad y publicación
 
-Solo documentación revisada y datos sintéticos. No subir semillas o claves, incluso de testnet, tokens, archivos `.env`, bases de datos locales, datos empresariales reales, capturas privadas ni transacciones firmadas que aún puedan ejecutarse. El plan privado íntegro y las conversaciones de trabajo no se publican aquí.
+Solo documentación revisada y datos sintéticos. No subir semillas o claves, incluso de testnet, tokens, archivos `.env`, bases de datos locales, datos empresariales reales, capturas privadas ni transacciones firmadas que aún puedan ejecutarse. La copia revisada del plan en `doc` excluye enlaces privados. Los originales de Drive se conservan sin cambios; las conversaciones de trabajo y los materiales privados relacionados no se publican aquí.
 
 ## Autoría, IA y licencia
 
