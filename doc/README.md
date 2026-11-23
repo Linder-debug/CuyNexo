@@ -2,9 +2,9 @@
 
 Materiales de referencia preparados el 22 de noviembre de 2026. Son propuestas de diseño, no una implementación ni evidencia de pruebas completadas.
 
-- [Plan y especificación v0.3](CuyNexo_Plan_y_Especificacion_v0.3.pdf), 10 páginas.
-- [Presentación v0.3](CuyNexo_Presentacion_v0.3.pdf), 7 diapositivas.
-- [Infografía v2](CuyNexo_Infografia_v2.jpg).
+- [Plan y especificación v0.3](1-CuyNexo_Plan_y_Especificacion_v0.3.pdf), 10 páginas.
+- [Presentación v0.3](2-CuyNexo_Presentacion_v0.3.pdf), 7 diapositivas.
+- [Infografía v2](3-CuyNexo_Infografia_v2.jpg).
 
 ## Cómo interpretar estos materiales
 
