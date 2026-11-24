@@ -3,7 +3,7 @@ import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { Account, Asset, Keypair, Memo, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Account, Asset, Keypair, Memo, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk/base";
 import { AgreementStore } from "../dist/agreements.js";
 import { signConsent } from "../dist/consents.js";
 import { StellarClassicAdapter } from "../dist/stellar-classic.js";
