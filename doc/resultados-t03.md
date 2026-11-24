@@ -20,7 +20,7 @@ npm --offline test
 node --check scripts/stellar-testnet.mjs
 ```
 
-Los [tests T03](../test/stellar-classic.test.mjs) organizan la verificación con un reloj controlado y claves efímeras generadas en memoria. Cubren los cuatro consentimientos, su persistencia al reabrir SQLite, rechazo firmado, ausencia de A o B, firma extra, duplicada o de otra red, manipulación de destino, monto, memo y vigencia, vencimiento exacto y reemplazo de versión. La prueba positiva inspecciona el XDR y las tres operaciones. Las pruebas locales usan datos sintéticos y no conectan a Horizon. Se usa el SDK 14.4.3 fijado en el lockfile. TypeScript mantiene la comprobación estricta del código propio y omite la comprobación interna de las declaraciones de dependencias por incompatibilidades de tipos del SDK.
+Los [tests T03](../test/stellar-classic.test.mjs) organizan la verificación con un reloj controlado y claves efímeras generadas en memoria. Cubren los cuatro consentimientos, su persistencia al reabrir SQLite, rechazo firmado, ausencia de A o B, firma extra, duplicada o de otra red, manipulación de destino, monto, memo y vigencia, vencimiento exacto y reemplazo de versión. La prueba positiva inspecciona el XDR y las tres operaciones. Las pruebas locales usan datos sintéticos y no conectan a Horizon. La dependencia vigente y la verificación posterior a la migración constan en [decisions.md](../decisions.md).
 
 ## Escenarios de testnet preparados
 
