@@ -27,9 +27,15 @@ Consulta la [arquitectura](doc/arquitectura.md) y los [resultados T02](doc/resul
 
 ## T03: Stellar clásico y firmas, 24 de noviembre de 2026
 
-Se fijó `@stellar/stellar-sdk` 14.4.3 para el adaptador clásico, con Horizon para los escenarios de testnet. Las rondas de T02 se conservan. Una versión apta para el adaptador congela las cuentas públicas y exige los consentimientos Ed25519 antes de preparar el XDR. La prueba local usa claves efímeras en memoria. Ver [resultados T03](doc/resultados-t03.md).
+El adaptador clásico usa `@stellar/stellar-sdk` con Horizon para los escenarios de testnet. Las rondas de T02 se conservan. Una versión apta para el adaptador congela las cuentas públicas y exige los consentimientos Ed25519 antes de preparar el XDR. La prueba local usa claves efímeras en memoria. Ver [resultados T03](doc/resultados-t03.md).
 
 La ejecución de B01 y B02 en testnet queda a la espera de autorización. T04 conserva la tarea de persistir intentos, reconciliar resultados por hash y evitar reenvíos duplicados. La vista local, la comparación y la entrega siguen en la secuencia completa de la v0.3.
+
+## T03: migración del SDK a 16.4.1
+
+Se fijó `@stellar/stellar-sdk` 16.4.1 con resolución normal de npm. El código criptográfico y de XDR importa las primitivas de `@stellar/stellar-sdk/base`. Los scripts de testnet conservan el transporte por defecto del SDK, basado en `fetch`, y B02 usa `TransactionFailedError.getResultCodes()`. Node.js 22.13.0 sigue siendo el mínimo del proyecto por SQLite. Se conserva `skipLibCheck` porque el SDK y sus dependencias todavía emiten errores al comprobar sus declaraciones. El código del proyecto sigue en modo estricto. [Guía oficial](https://stellar.github.io/js-stellar-sdk/migration/00-migration/) · [Notas de v16.4.1](https://github.com/stellar/js-stellar-sdk/releases/tag/v16.4.1).
+
+Con la nueva versión pasaron las 30 pruebas locales. Una respuesta HTTP 400 simulada de Horizon conservó los códigos esperados de B02. `npm audit` reportó dos alertas altas antes de la migración, una en `toml` y otra atribuida al SDK por esa dependencia. Después de instalar 16.4.1 reportó cero. El árbol resuelto ya no contiene `toml` ni el paquete separado `@stellar/stellar-base`. B01 y B02 en testnet siguen pendientes.
 
 ## Publicación y seguridad
 
