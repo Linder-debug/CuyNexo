@@ -21,9 +21,15 @@ El cálculo de este bloque agrupa las obligaciones de la ronda completa conforme
 
 Linder autorizó guardar rondas y versiones en SQLite, congelar los datos con SHA-256 y comprobar el consentimiento unánime con datos sintéticos. Se usa `node:sqlite` sin nuevas dependencias. El estado se conserva al reabrir la base.
 
-La prueba local representa a cada participante con su alias. Los votos de este bloque carecen de autenticación criptográfica y la comprobación Ed25519 del plan sigue pendiente. El bloqueo por rechazo, cambio y vencimiento ya se comprueba localmente en las pruebas de T02. La evidencia de atomicidad, autorización criptográfica y recuperación corresponde a los siguientes bloques.
+La prueba local representa a cada participante con su alias. Los votos de este bloque carecen de autenticación criptográfica y la comprobación Ed25519 del plan se añadió en T03 para las versiones con cuentas públicas congeladas. El bloqueo por rechazo, cambio y vencimiento ya se comprueba localmente en las pruebas de T02. La evidencia de atomicidad, autorización criptográfica y recuperación corresponde a los siguientes bloques.
 
 Consulta la [arquitectura](doc/arquitectura.md) y los [resultados T02](doc/resultados-t02.md). El registro histórico de aprobaciones permanece disponible tras invalidarlas.
+
+## T03: Stellar clásico y firmas, 24 de noviembre de 2026
+
+Se fijó `@stellar/stellar-sdk` 14.4.3 para el adaptador clásico, con Horizon para los escenarios de testnet. Las rondas de T02 se conservan. Una versión apta para el adaptador congela las cuentas públicas y exige los consentimientos Ed25519 antes de preparar el XDR. La prueba local usa claves efímeras en memoria. Ver [resultados T03](doc/resultados-t03.md).
+
+La ejecución de B01 y B02 en testnet queda a la espera de autorización. T04 conserva la tarea de persistir intentos, reconciliar resultados por hash y evitar reenvíos duplicados. La vista local, la comparación y la entrega siguen en la secuencia completa de la v0.3.
 
 ## Publicación y seguridad
 
