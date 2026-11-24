@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { StrKey } from "@stellar/stellar-sdk";
+import { canonicalJson } from "./canonical-json.js";
+import { verifiesConsent, type SignedConsent } from "./consents.js";
 import { calculateNetting, type NettingInput, type NettingResult } from "./netting.js";
 
 export interface AgreementDraft extends NettingInput {
   transactionSourceId: string;
   feeCapAtomic: string;
   consentBy: number;
+  accounts?: Readonly<Record<string, string>>;
 }
 
 export interface FrozenAgreement extends AgreementDraft, NettingResult {
@@ -40,6 +44,8 @@ interface RecordedConsent {
   participantId: string;
   decision: ConsentDecision;
   receivedAt: number;
+  signature?: string;
+  agreementHash?: string;
 }
 
 export interface AgreementView {
@@ -102,18 +108,17 @@ const SCHEMA = `
     FOREIGN KEY (round_id, version, agreement_hash)
       REFERENCES agreement_versions (round_id, version, hash)
   ) STRICT;
-`;
 
-function canonicalJson(value: unknown): string {
-  // All payload values are generated from validated ASCII strings and safe integers.
-  // RFC 8785 orders object keys by UTF-16 and preserves the array order.
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  const object = value as Record<string, unknown>;
-  const fields = Object.keys(object).sort().map((key) =>
-    `${JSON.stringify(key)}:${canonicalJson(object[key])}`);
-  return `{${fields.join(",")}}`;
-}
+  CREATE TABLE IF NOT EXISTS signed_consent_proofs (
+    round_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    participant_id TEXT NOT NULL,
+    signature TEXT NOT NULL,
+    PRIMARY KEY (round_id, version, participant_id),
+    FOREIGN KEY (round_id, version, participant_id)
+      REFERENCES synthetic_consents (round_id, version, participant_id)
+  ) STRICT;
+`;
 
 function isLive(status: VersionStatus): boolean {
   return status === "PENDING_CONSENT" || status === "APPROVED";
@@ -174,6 +179,16 @@ export class AgreementStore {
       || !Number.isSafeInteger(draft.consentBy + SETTLEMENT_WINDOW_MS)) {
       throw new AgreementError("INVALID_INPUT", "Invalid transaction source, fee cap or consent deadline");
     }
+    const accounts = draft.accounts;
+    if (accounts !== undefined) {
+      const entries = Object.entries(accounts ?? {});
+      if (entries.length !== draft.participants.length
+        || entries.some(([id, address]) => !draft.participants.includes(id)
+          || typeof address !== "string" || !StrKey.isValidEd25519PublicKey(address))
+        || new Set(entries.map(([, address]) => address)).size !== entries.length) {
+        throw new AgreementError("INVALID_INPUT", "Each participant needs a distinct Ed25519 account");
+      }
+    }
     return this.transaction(() => {
       const latest = this.requireCurrent(roundId, expectedVersion);
       const now = this.clock();
@@ -203,6 +218,7 @@ export class AgreementStore {
         consentBy: draft.consentBy,
         settleBy: draft.consentBy + SETTLEMENT_WINDOW_MS,
         specVersion: "0.3",
+        ...(accounts === undefined ? {} : { accounts: { ...accounts } }),
       };
       const payload = canonicalJson(agreement);
       const hash = createHash("sha256").update(payload, "utf8").digest("hex");
@@ -225,6 +241,34 @@ export class AgreementStore {
   }
 
   recordConsent(input: SyntheticConsent): AgreementView {
+    return this.saveConsent(input);
+  }
+
+  recordSignedConsent(input: SignedConsent): AgreementView {
+    if (typeof input.signature !== "string") {
+      throw new AgreementError("INVALID_CONSENT", "An Ed25519 signature is required");
+    }
+    return this.saveConsent(input, input.signature);
+  }
+
+  requireSignedAgreement(roundId: string, version: number, hash: string): AgreementView {
+    const view = this.getVersion(roundId, version);
+    const { accounts } = view.agreement;
+    if (view.hash !== hash || !view.canAdvance || !accounts
+      || !view.agreement.participants.every((participantId) => {
+        const vote = view.consents.find((item) => item.participantId === participantId);
+        return vote?.decision === "ACCEPT" && typeof vote.signature === "string"
+          && vote.agreementHash === hash
+          && verifiesConsent(accounts[participantId], {
+            roundId, version, agreementHash: hash, participantId, decision: "ACCEPT", signature: vote.signature,
+          });
+      })) {
+      throw new AgreementError("INVALID_STATE", "Agreement lacks current unanimous Ed25519 consent");
+    }
+    return view;
+  }
+
+  private saveConsent(input: SyntheticConsent, signature?: string): AgreementView {
     const { roundId, version, agreementHash, participantId, decision } = input;
     const invalid = new AgreementError("INVALID_CONSENT", "Consent does not match an eligible agreement version");
     if (typeof roundId !== "string" || !Number.isSafeInteger(version) || version < 1
@@ -238,6 +282,9 @@ export class AgreementStore {
       const status = this.refreshStatus(row, agreement, now);
       // Return eligibility failures inside the transaction so observed expiration is committed.
       if (now >= agreement.consentBy || !agreement.participants.includes(participantId)) return invalid;
+      const account = agreement.accounts?.[participantId];
+      if (account ? signature === undefined || !verifiesConsent(account, { ...input, signature })
+        : signature !== undefined) return invalid;
       const latest = this.findVersion(roundId);
       const round = this.db.prepare("SELECT closed_at FROM rounds WHERE id = ?").get(roundId);
       if (round?.closed_at !== null || latest?.hash !== row.hash) return invalid;
@@ -251,6 +298,11 @@ export class AgreementStore {
         INSERT INTO synthetic_consents (round_id, version, agreement_hash, participant_id, decision, received_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(roundId, version, row.hash, participantId, decision, now);
+      if (signature !== undefined) {
+        this.db.prepare(`
+          INSERT INTO signed_consent_proofs (round_id, version, participant_id, signature) VALUES (?, ?, ?, ?)
+        `).run(roundId, version, participantId, signature);
+      }
       const recorded = this.readConsents(roundId, version);
       let nextStatus: VersionStatus = "PENDING_CONSENT";
       if (decision === "REJECT") {
@@ -305,12 +357,15 @@ export class AgreementStore {
 
   private readConsents(roundId: string, version: number): RecordedConsent[] {
     return this.db.prepare(`
-      SELECT participant_id AS participantId, decision, received_at AS receivedAt
-      FROM synthetic_consents WHERE round_id = ? AND version = ? ORDER BY participant_id
-    `).all(roundId, version).map(({ participantId, decision, receivedAt }) => ({
+      SELECT c.participant_id AS participantId, c.decision, c.received_at AS receivedAt,
+        c.agreement_hash AS agreementHash, p.signature
+      FROM synthetic_consents c LEFT JOIN signed_consent_proofs p USING (round_id, version, participant_id)
+      WHERE c.round_id = ? AND c.version = ? ORDER BY c.participant_id
+    `).all(roundId, version).map(({ participantId, decision, receivedAt, agreementHash, signature }) => ({
       participantId: participantId as string,
       decision: decision as ConsentDecision,
       receivedAt: receivedAt as number,
+      ...(typeof signature === "string" ? { signature, agreementHash: agreementHash as string } : {}),
     }));
   }
 
