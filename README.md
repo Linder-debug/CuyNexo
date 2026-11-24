@@ -2,7 +2,7 @@
 
 Prototipo de compensación multilateral de deudas entre pequeñas empresas, preparado para Stellar Codember Perú 2026.
 
-> Estado de esta rama: **base técnica aprobada y motor de neteo local disponible para revisión**. Los resultados A01–A03 corresponden al cálculo con datos sintéticos. La integración con Stellar está prevista en los siguientes bloques.
+> Estado de esta rama: **neteo local y control de versiones y consentimientos sintéticos disponibles para revisión**. La integración con Stellar está prevista en los siguientes bloques.
 
 ## Problema y propuesta
 
@@ -38,15 +38,14 @@ TypeScript, SQLite, una ronda activa por instalación local con datos sintético
 
 ## Ejecución y evidencia
 
-Con Node.js 22 o superior:
+Con Node.js 22.13.0 o superior y el compilador del archivo de bloqueo ya instalado:
 
 ```sh
-npm ci
 npm test
 npm run demo:neteo
 ```
 
-`npm ci` instala el compilador fijado. Las pruebas y la demo se ejecutan localmente con datos sintéticos. La demo imprime saldos, pagos, volumen bruto y volumen residual en unidades mínimas. Consulta [la cobertura y los resultados A01–A03](doc/resultados-neteo-a01-a03.md).
+Las pruebas y la demo se ejecutan localmente con datos sintéticos. Para preparar dependencias en un entorno sin red, `npm ci --offline --ignore-scripts --no-audit --no-fund` requiere que TypeScript 5.9.3 esté en la caché de npm. La demo imprime saldos, pagos y totales en unidades mínimas. Consulta los [resultados A01–A03](doc/resultados-neteo-a01-a03.md) y los [resultados T02](doc/resultados-t02.md).
 
 ## Seguridad y publicación
 
