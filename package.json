@@ -3,11 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
-    "demo:neteo": "npm run build && node scripts/demo-neteo.mjs"
+    "demo:neteo": "npm run build && node scripts/demo-neteo.mjs",
+    "testnet:success": "npm run build && node scripts/stellar-testnet.mjs success",
+    "testnet:failure": "npm run build && node scripts/stellar-testnet.mjs failure"
   },
-  "devDependencies": { "typescript": "5.9.3" }
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "14.4.3"
+  }
 }
