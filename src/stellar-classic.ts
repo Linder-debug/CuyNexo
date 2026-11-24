@@ -1,4 +1,4 @@
-import { Account, Asset, Keypair, Memo, Networks, Operation, Transaction, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Account, Asset, Keypair, Memo, Networks, Operation, Transaction, TransactionBuilder } from "@stellar/stellar-sdk/base";
 import type { AgreementStore, FrozenAgreement } from "./agreements.js";
 
 interface AgreementRef {
