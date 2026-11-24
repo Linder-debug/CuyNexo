@@ -1,4 +1,4 @@
-import { Keypair } from "@stellar/stellar-sdk";
+import { Keypair } from "@stellar/stellar-sdk/base";
 import type { SyntheticConsent } from "./agreements.js";
 import { canonicalJson } from "./canonical-json.js";
 
