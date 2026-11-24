@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Horizon, Keypair, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Horizon, TransactionFailedError } from "@stellar/stellar-sdk";
+import { Keypair, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk/base";
 import { AgreementStore } from "../dist/agreements.js";
 import { signConsent } from "../dist/consents.js";
 import { StellarClassicAdapter } from "../dist/stellar-classic.js";
@@ -83,7 +84,7 @@ async function runScenario(scenario) {
     try {
       await server.submitTransaction(transaction);
     } catch (error) {
-      const codes = error?.response?.data?.extras?.result_codes;
+      const codes = error instanceof TransactionFailedError ? error.getResultCodes() : undefined;
       if (scenario !== "failure" || codes?.transaction !== "tx_failed") {
         throw new Error("Submission outcome not accepted or unknown; check the printed hash before any retry.");
       }
