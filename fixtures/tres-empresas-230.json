@@ -1,0 +1,8 @@
+{
+  "participants": ["A", "B", "C"],
+  "obligations": [
+    { "obligationId": "O1", "debtorId": "A", "creditorId": "B", "amountAtomic": "1000000000" },
+    { "obligationId": "O2", "debtorId": "B", "creditorId": "C", "amountAtomic": "800000000" },
+    { "obligationId": "O3", "debtorId": "C", "creditorId": "A", "amountAtomic": "500000000" }
+  ]
+}
