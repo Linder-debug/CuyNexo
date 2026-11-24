@@ -1,6 +1,6 @@
 # Especificación inicial del P0
 
-Estado de esta rama: base técnica aprobada. Primer bloque local implementado para revisión. El [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf) define la secuencia completa.
+Estado de esta rama: base técnica aprobada. Neteo y versiones con consentimientos sintéticos implementados para revisión. El [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf) define la secuencia completa.
 
 ## Objetivo
 
@@ -38,4 +38,4 @@ Mainnet y fondos reales, datos reales de empresas, demanda validada, crédito o 
 
 ## Evidencia por etapa
 
-A01–A03 corresponden al [neteo local](doc/resultados-neteo-a01-a03.md). La aplicación de los consentimientos y las firmas, testnet, la evidencia por hash y el video pertenecen a los siguientes bloques del plan.
+A01–A03 corresponden al [neteo local](doc/resultados-neteo-a01-a03.md). [T02](doc/resultados-t02.md) cubre la persistencia local y las reglas de unanimidad, rechazo, reemplazo y vencimiento mediante decisiones sintéticas. La verificación Ed25519 del consentimiento, las firmas de pago, testnet, la evidencia por hash de transacción y el video pertenecen a los siguientes bloques del plan.
