@@ -4,28 +4,22 @@
 
 Se prepara un repositorio público de CuyNexo con documentación inicial e issues sin asignar. Esto no aprueba implementación, no asigna trabajo a otras personas, no invita colaboradores y no completa el registro del Hub.
 
-## G0: pendiente
+## G0: decisiones técnicas aprobadas, 24 de noviembre de 2026
 
-Antes de implementar, acordar y registrar:
+Linder aprobó la base técnica del [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf):
 
-- Alcance mínimo y revisión del caso sintético exacto.
-- Lenguaje principal y SDK o librería para Stellar clásico.
-- Ruta para construir, firmar con los pagadores y verificar la misma transacción por hash.
-- Alcance de interfaz, persistencia y recuperación.
-- Responsables, revisión cruzada y disponibilidad de trabajo.
-- Licencia y declaración de cualquier reutilización.
+- Una ronda activa por instalación local, con datos sintéticos de 3 a 8 participantes.
+- TypeScript para la implementación, SQLite para la persistencia del P0 y Horizon para la integración con Stellar testnet.
+- Stellar clásico para liquidar. En el caso base, cuatro participantes consienten la misma versión y los dos pagadores firman el mismo cuerpo de una transacción con tres pagos.
+- El primer bloque autorizado es el neteo local, con el caso de cuatro empresas y las pruebas A01–A03. ChatGPT implementa, Instinct verifica de forma independiente y Linder decide sobre la revisión y el avance.
 
-No se añade por ahora un manifiesto de dependencias, esqueleto de aplicación, CI de un lenguaje, fixture ejecutable ni código.
+La aprobación conserva el alcance completo del plan. El consentimiento y la firma, la persistencia, la liquidación en testnet, la recuperación por hash, la vista local, la comparación y la entrega siguen en la secuencia v0.3. La librería concreta de Stellar se usará en la etapa de integración.
 
-## Arquitectura propuesta, no implementada
+El cálculo de este bloque agrupa las obligaciones de la ronda completa conforme a la regla propuesta en la v0.3, incluso si su grafo tiene componentes desconectados. Una liquidación futura del resultado exige el consentimiento de todos los integrantes de la ronda. El cálculo por sí solo no autoriza pagos.
 
-Neteo fuera de cadena, consentimiento de la versión en la aplicación, liquidación con transacción clásica de Stellar testnet y verificación por Horizon. La selección técnica final puede ajustar esta propuesta y deberá quedar registrada. La reducción del volumen de pagos deriva del neteo. La atomicidad y la recuperación siguen pendientes de demostración.
+## Estado de la arquitectura
 
-## Funciones propuestas, sin personas asignadas
-
-- Producto y criterios de aceptación.
-- Implementación e integración.
-- Revisión cruzada de evidencia y entrega.
+El motor de neteo funciona localmente. El resto de los componentes está descrito en la [arquitectura](doc/arquitectura.md). Las pruebas A01–A03 miden el cálculo. La evidencia de atomicidad y recuperación corresponde a etapas posteriores del plan.
 
 ## Publicación y seguridad
 
