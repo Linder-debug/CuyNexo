@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { StrKey } from "@stellar/stellar-sdk";
+import { StrKey } from "@stellar/stellar-sdk/base";
 import { canonicalJson } from "./canonical-json.js";
 import { verifiesConsent, type SignedConsent } from "./consents.js";
 import { calculateNetting, type NettingInput, type NettingResult } from "./netting.js";
