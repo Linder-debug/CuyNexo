@@ -1,6 +1,6 @@
 # Arquitectura de CuyNexo
 
-**Estado:** base técnica aprobada según el plan v0.3. Motor local y persistencia de versiones con consentimientos sintéticos disponibles para revisión. Los siguientes componentes describen el diseño del P0.
+**Estado:** base técnica aprobada según el plan v0.3. Motor local, persistencia y adaptador clásico con Ed25519 disponibles para revisión. Los siguientes componentes describen el diseño del P0.
 **Proyecto:** CuyNexo · Stellar Codember Perú 2026
 
 CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los pagos residuales como una sola transacción clásica de Stellar. El objetivo del prototipo es demostrar un cálculo reproducible, una liquidación conjunta y una confirmación verificable en testnet. [Ver diagrama de arquitectura](./diagrama-arquitectura.md).
@@ -10,8 +10,8 @@ CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los p
 | Estado | Alcance |
 |---|---|
 | **Confirmado** | La base aprobada usa una ronda local con datos sintéticos, TypeScript, SQLite y Horizon testnet. El caso base requiere cuatro consentimientos fuera de cadena y dos firmas de pago en una transacción clásica de Stellar. |
-| **Disponible en esta rama** | Motor determinista, SQLite para rondas y versiones, hash del acuerdo y control local de unanimidad. La demo usa cuatro empresas y tres pagos residuales. Ver [A01–A03](resultados-neteo-a01-a03.md) y [T02](resultados-t02.md). |
-| **Pendiente de implementación** | Consentimiento autenticado con Ed25519, firmas de pago, persistencia de intentos, envío, reconciliación, vista local y verificación en testnet. La librería de Stellar se concreta en el bloque de integración. |
+| **Disponible en esta rama** | Motor determinista, SQLite para rondas y versiones, hash del acuerdo y control local de unanimidad. La demo usa cuatro empresas y tres pagos residuales. T03 añade comprobación Ed25519 y XDR clásico con dos firmas. Ver [A01–A03](resultados-neteo-a01-a03.md), [T02](resultados-t02.md) y [T03](resultados-t03.md). |
+| **Pendiente de implementación** | Persistencia de intentos, reconciliación, vista local y verificación en testnet. Los scripts de envío para los escenarios de prueba están preparados. |
 
 El [registro de decisiones](../decisions.md) identifica lo aprobado. Soroban se reconsideraría si surge una regla persistente en cadena que Stellar clásico no pueda cubrir.
 
