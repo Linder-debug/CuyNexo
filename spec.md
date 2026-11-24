@@ -1,12 +1,12 @@
 # Especificación inicial del P0
 
-Estado: propuesta de diseño. G0 pendiente. Sin implementación ni pruebas ejecutadas en este repositorio.
+Estado de esta rama: base técnica aprobada. Primer bloque local implementado para revisión. El [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf) define la secuencia completa.
 
 ## Objetivo
 
 Demostrar con datos sintéticos el neteo de deudas cruzadas y evaluar la liquidación atómica del resultado en Stellar testnet. No validar demanda, ofrecer crédito, custodiar fondos reales ni atribuir a blockchain la reducción producida por el neteo.
 
-## Flujo propuesto
+## Flujo previsto del P0
 
 1. Cargar obligaciones sintéticas de 3 a 8 participantes y validar importes e identidades del caso.
 2. Calcular saldos netos de manera determinista y generar una propuesta identificable por versión.
@@ -20,7 +20,7 @@ El consentimiento de las partes es una validación de la aplicación. Las firmas
 
 ## Caso sintético de referencia
 
-El plan usa cuatro empresas y compara 320 unidades de obligaciones brutas con 60 unidades después del neteo, distribuidas en tres pagos. La reducción del volumen es 81,25 % en ese ejemplo. El fixture exacto, sus saldos y los pagos esperados deben revisarse y aprobarse antes de implementarlo. No se inventan aquí obligaciones individuales ni se publica un fixture ejecutable.
+El plan usa cuatro empresas y compara 320 unidades de obligaciones brutas con 60 unidades después del neteo, distribuidas en tres pagos. La reducción del volumen es 81,25 % en ese ejemplo. El [fixture ejecutable](fixtures/cuatro-empresas.json) reproduce las cinco obligaciones de la sección 2.2 de la v0.3. El [resultado A01](doc/resultados-neteo-a01-a03.md) enumera los saldos y los pagos esperados.
 
 ## Criterios de aceptación previstos
 
@@ -34,8 +34,8 @@ El plan usa cuatro empresas y compara 320 unidades de obligaciones brutas con 60
 
 ## Fuera de alcance inicial
 
-Mainnet y fondos reales, datos reales de empresas, demanda validada, crédito o productos financieros, token especulativo y contrato Soroban sin una necesidad aprobada. La interfaz, la persistencia y el lenguaje se cierran en G0.
+Mainnet y fondos reales, datos reales de empresas, demanda validada, crédito o productos financieros, token especulativo y contrato Soroban sin una necesidad aprobada. Las decisiones técnicas aprobadas constan en [decisions.md](decisions.md).
 
-## Evidencia pendiente
+## Evidencia por etapa
 
-No hay todavía pruebas de código, hashes testnet, cuentas de demostración, app desplegada ni video. Los issues describen trabajo futuro, no capacidades terminadas.
+A01–A03 corresponden al [neteo local](doc/resultados-neteo-a01-a03.md). La aplicación de los consentimientos y las firmas, testnet, la evidencia por hash y el video pertenecen a los siguientes bloques del plan.
