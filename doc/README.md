@@ -8,6 +8,7 @@ Materiales de referencia del 22 de noviembre de 2026 y documentación del bloque
 
 - [Arquitectura](arquitectura.md) y [diagrama del P0](diagrama-arquitectura.md).
 - [Resultados locales A01–A03](resultados-neteo-a01-a03.md).
+- [Resultados locales T02](resultados-t02.md).
 
 ## Cómo interpretar estos materiales
 
