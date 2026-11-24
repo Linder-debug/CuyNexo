@@ -2,7 +2,7 @@
 
 Prototipo de compensación multilateral de deudas entre pequeñas empresas, preparado para Stellar Codember Perú 2026.
 
-> Estado: **en diseño, G0 pendiente**. Este repositorio contiene documentación inicial y un backlog de trabajo. No contiene una aplicación implementada ni evidencia de pruebas en Stellar testnet. El stack y los responsables están pendientes de acuerdo del equipo.
+> Estado de esta rama: **base técnica aprobada y motor de neteo local disponible para revisión**. Los resultados A01–A03 corresponden al cálculo con datos sintéticos. La integración con Stellar está prevista en los siguientes bloques.
 
 ## Problema y propuesta
 
@@ -10,22 +10,21 @@ Cuando varias empresas mantienen deudas cruzadas, liquidar cada obligación por 
 
 El prototipo usará **datos sintéticos declarados**. No se afirma que exista demanda validada ni se usarán fondos reales. La reducción del volumen proviene del neteo, no de blockchain. El aporte de Stellar que se busca demostrar es una liquidación atómica con varios pagadores.
 
-## Alcance propuesto del P0
+## Alcance completo del P0
 
 - Entre 3 y 8 participantes, con importes exactos y neteo determinista.
-- Revisión y consentimiento de una misma versión de la propuesta.
+- Revisión de una misma versión de la propuesta y cuatro consentimientos en el caso base.
 - Construcción de una transacción clásica con tres pagos y dos pagadores en el caso base.
 - Reunión de firmas sobre el mismo cuerpo de transacción.
 - Envío a Horizon testnet y verificación por hash.
-- Recuperación de respuestas perdidas sin generar un segundo pago.
+- Persistencia local en SQLite, recuperación por hash sin generar un segundo pago y vista local de revisión.
+- Evidencia reproducible, comparación con el flujo convencional, revisión y entrega.
 
 El ejemplo sintético del plan reduce el volumen bruto de 320 a 60 unidades, una reducción del 81,25 %. Es una propiedad de ese ejemplo, **no ahorro monetario validado ni resultado de una prueba on-chain**.
 
-## Decisiones pendientes
+## Decisiones aprobadas
 
-G0 debe cerrar alcance, lenguaje, SDK de Stellar clásico, interfaz, persistencia y reparto del trabajo. TypeScript, Rust y Python siguen bajo evaluación; este repositorio no fija ninguno. Soroban no forma parte del P0 salvo justificación y aprobación de un cambio de alcance.
-
-Las funciones a cubrir son producto y aceptación, implementación e integración, y revisión cruzada de evidencia y entrega. No hay responsables asignados ni colaboradores invitados por esta preparación.
+TypeScript, SQLite, una ronda activa por instalación local con datos sintéticos y liquidación clásica mediante Horizon testnet. El [registro de decisiones](decisions.md) detalla el estado de cada etapa y cómo se revisa este bloque.
 
 ## Documentación
 
@@ -35,11 +34,19 @@ Las funciones a cubrir son producto y aceptación, implementación e integració
 - [Decisiones y límites](decisions.md)
 - El backlog se mantiene en los issues del repositorio, sin asignaciones iniciales.
 
-- [Arquitectura propuesta](doc/arquitectura.md) y [diagrama Mermaid](doc/diagrama-arquitectura.md). G0 y stack pendientes, sin implementación.
+- [Arquitectura](doc/arquitectura.md) y [diagrama Mermaid](doc/diagrama-arquitectura.md).
 
 ## Ejecución y evidencia
 
-Todavía no hay instrucciones de instalación o ejecución, aplicación desplegada, direcciones de testnet, hashes de prueba ni video demo. Se añadirán con evidencia real después de cerrar G0 y aprobar el desarrollo. La documentación no demuestra por sí sola atomicidad, recuperación ni funcionalidad.
+Con Node.js 22 o superior:
+
+```sh
+npm ci
+npm test
+npm run demo:neteo
+```
+
+`npm ci` instala el compilador fijado. Las pruebas y la demo se ejecutan localmente con datos sintéticos. La demo imprime saldos, pagos, volumen bruto y volumen residual en unidades mínimas. Consulta [la cobertura y los resultados A01–A03](doc/resultados-neteo-a01-a03.md).
 
 ## Seguridad y publicación
 
