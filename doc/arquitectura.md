@@ -1,6 +1,6 @@
 # Arquitectura de CuyNexo
 
-**Estado:** propuesta de diseño basada en el plan v0.3. G0 sigue abierto.  
+**Estado:** base técnica aprobada según el plan v0.3. Motor local implementado para revisión. Los siguientes componentes describen el diseño del P0.
 **Proyecto:** CuyNexo · Stellar Codember Perú 2026
 
 CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los pagos residuales como una sola transacción clásica de Stellar. El objetivo del prototipo es demostrar un cálculo reproducible, una liquidación conjunta y una confirmación verificable en testnet. [Ver diagrama de arquitectura](./diagrama-arquitectura.md).
@@ -9,13 +9,13 @@ CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los p
 
 | Estado | Alcance |
 |---|---|
-| **Confirmado** | El nombre es CuyNexo y el equipo está formado por Linder y Gonza. La v0.3 es la referencia para revisar el diseño. El desarrollo depende del acuerdo G0. |
-| **Propuesto** | Una ronda activa por instalación local, datos sintéticos de 3 a 8 participantes, XLM de Stellar testnet, motor determinista, consentimiento verificable fuera de cadena, una transacción clásica por intento autorizado y un verificador separado. La demo base usa cuatro participantes y tres pagos. |
-| **Pendiente** | Aprobar G0, confirmar lenguaje y SDK, acceso a Horizon, persistencia local, alcance de la interfaz y reparto de trabajo. Confirmar las reglas de autorización, caducidad y compensación entre grupos de obligaciones desconectados. La ejecución y la evidencia de testnet están pendientes. |
+| **Confirmado** | La base aprobada usa una ronda local con datos sintéticos, TypeScript, SQLite y Horizon testnet. El caso base requiere cuatro consentimientos fuera de cadena y dos firmas de pago en una transacción clásica de Stellar. |
+| **Disponible en esta rama** | Motor determinista del neteo y pruebas A01–A03. La demo local usa cuatro participantes y tres pagos residuales. |
+| **Pendiente de implementación** | Coordinador, consentimiento, firmas, persistencia, envío, reconciliación, vista local y verificación en testnet. La librería de Stellar se concreta en el bloque de integración. |
 
-TypeScript con Node.js, SQLite y Horizon testnet figuran como propuesta de referencia en la v0.3. Rust y Python siguen en evaluación. El criterio para elegir SDK es poder formar una transacción clásica con distintas fuentes de pago, reunir firmas sobre el mismo cuerpo, enviarla y comprobarla por hash. Soroban se reconsideraría si surge una regla persistente en cadena que Stellar clásico no pueda cubrir.
+El [registro de decisiones](../decisions.md) identifica lo aprobado. Soroban se reconsideraría si surge una regla persistente en cadena que Stellar clásico no pueda cubrir.
 
-## Componentes y responsabilidades propuestas
+## Componentes y responsabilidades del diseño
 
 | Componente | Responsabilidad |
 |---|---|
@@ -36,7 +36,7 @@ TypeScript con Node.js, SQLite y Horizon testnet figuran como propuesta de refer
 
 La aplicación administra las versiones y los consentimientos. El coordinador opera con claves públicas y firmas, mientras los fondos permanecen en las cuentas pagadoras hasta que Stellar aplica los pagos. El resultado confirmado y su evidencia se obtienen de la red. [Operaciones y transacciones de Stellar](https://developers.stellar.org/docs/learn/fundamentals/transactions/operations-and-transactions).
 
-## Caso de referencia y evidencia esperada
+## Caso de referencia y evidencia
 
 | Obligaciones sintéticas | Saldos netos | Pagos residuales |
 |---|---|---|
@@ -46,7 +46,7 @@ El caso pasa de **320 unidades brutas a 60 unidades en pagos residuales**. El 81
 
 | Prueba prevista | Criterio de aceptación |
 |---|---|
-| **Neteo** | Se obtienen los tres pagos esperados y se conserva el saldo neto de cada participante. |
+| **Neteo** | La ejecución local obtuvo los tres pagos esperados y conservó el saldo de cada participante. Ver [A01–A03](resultados-neteo-a01-a03.md). |
 | **Liquidación exitosa** | La red confirma un único hash con las tres operaciones y los importes previstos. |
 | **Fallo de la última operación** | B tiene saldo transferible insuficiente, pese a que el sobre reúne ambas firmas. Quedan cero pagos aplicados. Si corresponde, registrar la comisión y el consumo de secuencia por separado. |
 | **Autorización** | Un rechazo del acuerdo impide preparar el envío. Una firma requerida de pago ausente impide la liquidación en Stellar. |
