@@ -1,0 +1,10 @@
+{
+  "participants": ["A", "B", "C", "D"],
+  "obligations": [
+    { "obligationId": "O1", "debtorId": "A", "creditorId": "B", "amountAtomic": "1000000000" },
+    { "obligationId": "O2", "debtorId": "B", "creditorId": "C", "amountAtomic": "800000000" },
+    { "obligationId": "O3", "debtorId": "C", "creditorId": "D", "amountAtomic": "600000000" },
+    { "obligationId": "O4", "debtorId": "D", "creditorId": "A", "amountAtomic": "500000000" },
+    { "obligationId": "O5", "debtorId": "B", "creditorId": "D", "amountAtomic": "300000000" }
+  ]
+}
