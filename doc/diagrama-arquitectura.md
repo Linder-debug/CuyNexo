@@ -1,6 +1,6 @@
 # CuyNexo · Diagrama de arquitectura
 
-**Diseño del P0 basado en la v0.3, con base técnica aprobada.** El motor de neteo está disponible en esta rama. La integración y las pruebas de testnet siguen pendientes. [Ver documento de arquitectura](./arquitectura.md).
+**Diseño del P0 basado en la v0.3, con base técnica aprobada.** El motor de neteo, las versiones en SQLite y la comprobación de unanimidad con decisiones sintéticas están disponibles en esta rama. La integración y las pruebas de testnet siguen pendientes. [Ver documento de arquitectura](./arquitectura.md).
 
 ```mermaid
 flowchart TD
