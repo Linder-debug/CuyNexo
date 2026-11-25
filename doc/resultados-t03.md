@@ -32,3 +32,18 @@ Ejecutar cada comando solo cuando se autorice la prueba correspondiente. Ambos c
 | **B02 · Fallo de la última operación** | `npm run testnet:failure -- --execute-testnet`. La preparación crea B con 2 XLM y sin subentradas. La transacción de prueba reúne ambas firmas. Se espera `tx_failed` con `op_underfunded` en la tercera operación, cero deltas de pago y comisión y secuencia contabilizadas por separado. |
 
 Los scripts imprimen el hash antes del envío y contrastan el registro del ledger y los saldos después. Ante una respuesta incierta, se detienen y dejan disponible el hash para investigación. La evidencia observada en testnet, la reconciliación persistida, la vista local, la comparación y la entrega se mantienen en el alcance completo de la v0.3.
+
+## Evidencia exportada por B01 y B02
+
+Cada ejecución autorizada crea su propio archivo local en `evidence/t03/B01-*/evidence.json` o `evidence/t03/B02-*/evidence.json`. El script imprime su ruta y actualiza el archivo por etapas. La carpeta está excluida del control de versiones.
+
+| Campo | Contenido |
+|---|---|
+| `accounts` | Direcciones públicas de A–D, balances XLM y secuencias antes y después. Los balances se guardan como cadenas de stroops. |
+| `operations` | Orden, fuente, destino e importe de cada pago del sobre. `applied` distingue inclusión exitosa, reversión y resultado pendiente. Los códigos de B02 conservan el orden de las tres operaciones. |
+| `hash`, `ledger`, `explorerUrl` | El hash se guarda antes de enviar. El número de ledger y el enlace se añaden cuando Horizon confirma la inclusión de ese hash, incluso si la transacción incluida falló. |
+| `successful`, `feeAtomic`, `feeAccount`, `resultCodes` | Resultado de la transacción, comisión separada y códigos del rechazo cuando corresponden. Los valores desconocidos se registran como `null`. |
+
+El archivo queda en estado `verified` después de pasar los criterios del escenario. Si se interrumpe la prueba o un criterio falla, el registro conserva la información disponible para revisar el intento. El exportador selecciona campos públicos y omite claves privadas, semillas, firmas, sobres XDR y respuestas completas. [StellarExpert](https://stellar.expert/api-docs).
+
+Las 30 pruebas previas se conservan. Se añadieron cuatro [pruebas locales del exportador](../test/testnet-evidence.test.mjs) con datos simulados. Cubren éxito, fallo incluido, resultado incierto y rechazo de una clave privada en un campo público. La ejecución real de B01 y B02 sigue pendiente.
