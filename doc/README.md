@@ -12,6 +12,7 @@ Materiales de referencia del 22 de noviembre de 2026 y documentación del bloque
 - [Validación local T03 y escenarios B01/B02](resultados-t03.md).
 - [Ejecuciones históricas B01/B02 en testnet](evidencia-t03/registro-ejecuciones.md).
 - [Resultados locales T04 y recuperación por hash](resultados-t04.md).
+- [Guion B04 y evidencia simulada entre procesos](evidencia-b04/README.md).
 
 ## Cómo interpretar estos materiales
 
