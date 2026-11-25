@@ -1,5 +1,7 @@
 # T03 · Consentimiento Ed25519 y pagos Stellar clásicos
 
+B01 y B02 cuentan con [evidencia histórica en testnet](evidencia-t03/registro-ejecuciones.md). La revisión local de la corrección de Instinct y la recuperación por hash se documentan en [T04](resultados-t04.md).
+
 **Validación local del 24 de noviembre de 2026:** 10 pruebas de T03 aprobadas. Con A01–A03 y T02, 30 aprobadas y 0 fallidas. Los escenarios B01 y B02 en testnet están preparados y pendientes de ejecución. La revisión independiente de Instinct sigue pendiente.
 
 ## Flujo implementado
