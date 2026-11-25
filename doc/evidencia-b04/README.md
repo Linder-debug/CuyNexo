@@ -12,7 +12,7 @@ Se usan cuatro cuentas efímeras, cuatro consentimientos y las dos firmas del ca
 | Reinicio | Proceso distinto, mismo hash en SQLite y cero envíos desde el proceso de recuperación. Sin confirmación, la salida mantiene `RECONCILING` y devuelve código 3. |
 | Liquidación | El hash recuperado contiene exactamente A→C 20, A→D 30 y B→D 10 XLM. |
 | Ausencia de repetición | El historial de la cuenta fuente A desde la secuencia inicial contiene únicamente el hash recuperado. La secuencia avanza en uno y los deltas de las cuatro cuentas coinciden con una sola liquidación. Se separa la comisión de A. |
-| Expediente | Se registran hash, direcciones, operationes, balances, secuencia, ledger, comisión y, para testnet, enlace al explorador. Solo se comparte `evidence.json` revisado. |
+| Expediente | Se registran hash, direcciones, operaciones, balances, secuencia, ledger, comisión y, para testnet, enlace al explorador. Solo se comparte `evidence.json` revisado. |
 
 El alcance de la comprobación de ausencia de duplicados son las cuentas efímeras de la ronda. Si el historial de la cuenta fuente no cabe en la primera página de 200 registros, el escenario queda incompleto.
 
