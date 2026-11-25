@@ -37,6 +37,10 @@ Se fijó `@stellar/stellar-sdk` 16.4.1 con resolución normal de npm. El código
 
 Con la nueva versión pasaron las 30 pruebas locales. Una respuesta HTTP 400 simulada de Horizon conservó los códigos esperados de B02. `npm audit` reportó dos alertas altas antes de la migración, una en `toml` y otra atribuida al SDK por esa dependencia. Después de instalar 16.4.1 reportó cero. El árbol resuelto ya no contiene `toml` ni el paquete separado `@stellar/stellar-base`. B01 y B02 en testnet siguen pendientes.
 
+## T04: recuperación por hash, 24 de noviembre de 2026
+
+Se validó localmente la corrección de Instinct en la consulta por hash. Los expedientes de B01 y B02 se conservan en el [registro T03](doc/evidencia-t03/registro-ejecuciones.md). El coordinador persiste el intento único y el sobre antes del envío, y usa el mismo hash para recuperar el resultado. La falta de confirmación mantiene `RECONCILING`, incluso si pasó la vigencia local. B04 en testnet, la vista local y el resto de la secuencia v0.3 se mantienen. Ver [resultados y límites de T04](doc/resultados-t04.md).
+
 ## Publicación y seguridad
 
 Publicar solo documentación saneada y datos sintéticos. No incluir claves, semillas, tokens, bases locales, información empresarial real, capturas privadas, conversaciones ni materiales privados relacionados. La copia revisada del plan en `doc` excluye enlaces privados y conserva su estado de propuesta histórica. Revisar cualquier evidencia futura antes de publicarla.
