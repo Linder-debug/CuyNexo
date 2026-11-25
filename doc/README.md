@@ -15,6 +15,7 @@ Materiales de referencia del 22 de noviembre de 2026 y documentación del bloque
 - [Guion B04 y evidencia simulada entre procesos](evidencia-b04/README.md).
 - [Revisión B03 de firma faltante y vencimiento](evidencia-b03/README.md).
 - [Vista local, guion de comprensión y resultados B05](evidencia-t05/README.md).
+- [Expediente A/B e informe SDD de T06](evidencia-t06/expediente-sdd.md), [demo y capturas](evidencia-t06/demo.md) y [gobernanza](evidencia-t06/gobernanza.md).
 
 ## Cómo interpretar estos materiales
 
