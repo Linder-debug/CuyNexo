@@ -15,3 +15,7 @@ Fuente de la ejecución 1: salida de la primera ejecución de `npm run testnet:s
 Causa de la ejecución 1: con `@stellar/stellar-sdk` 16.4.1 `transactions().transaction(hash)` ya no tiene `.includeFailed()`. La línea en `scripts/stellar-testnet.mjs` fue corregida quitando esa llamada. Ninguna aserción cambió.
 
 Autoría: esta corrección la hizo Instinct directamente, no ChatGPT, y queda pendiente de revisión por ChatGPT.
+
+## Revisión local de la corrección
+
+Se validó la corrección con el SDK instalado 16.4.1 y el cliente HTTP interceptado. El objeto que devuelve `transactions().transaction(hash)` carece de `includeFailed()`. La prueba de regresión comprueba la consulta exacta por hash para respuestas con `successful: true` y `successful: false`. La prueba usa el mismo helper que invocan los scripts y no contacta testnet. El registro anterior conserva la evidencia histórica reportada por Instinct.
