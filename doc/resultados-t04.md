@@ -1,6 +1,6 @@
 # T04 · Intento persistente y reconciliación
 
-Implementación local del [plan v0.3](1-CuyNexo_Plan_y_Especificacion_v0.3.pdf), con el caso sintético de cuatro empresas. El bloque completa la simulación local de B04. Sigue pendiente la comprobación de B04 con un envío real y su visualización en T05.
+Implementación local del [plan v0.3](1-CuyNexo_Plan_y_Especificacion_v0.3.pdf), con el caso sintético de cuatro empresas. El bloque completa la simulación local de B04. El [escenario B04](evidencia-b04/README.md) añade una reproducción local con dos procesos y prepara la comprobación con un envío real. La corrida en testnet y el contraste con la vista de T05 siguen pendientes.
 
 ## Persistencia y recuperación
 
