@@ -2,7 +2,7 @@
 
 Prototipo de compensación multilateral de deudas entre pequeñas empresas, preparado para Stellar Codember Perú 2026.
 
-> Estado de esta rama: **neteo, rondas en SQLite, pagos Stellar clásicos y recuperación por hash validados localmente**. B01 y B02 cuentan con evidencia histórica. La verificación de B04 en testnet sigue pendiente.
+> Estado de esta rama: **vista local de revisión y comparación B05 reproducibles**. Los expedientes archivados incluyen éxito, fallo, rechazo y recuperación en Stellar testnet. La prueba de comprensión con personas está pendiente.
 
 ## Problema y propuesta
 
@@ -43,9 +43,12 @@ Con Node.js 22.13.0 o superior y el compilador del archivo de bloqueo ya instala
 ```sh
 npm test
 npm run demo:neteo
+npm run demo:web
 ```
 
 Las pruebas y la demo se ejecutan localmente con datos sintéticos. Para preparar dependencias en un entorno sin red, `npm ci --offline --ignore-scripts --no-audit --no-fund` requiere que las dependencias fijadas en `package-lock.json` estén en la caché de npm. La demo imprime saldos, pagos y totales en unidades mínimas. Consulta los [resultados A01–A03](doc/resultados-neteo-a01-a03.md), los [resultados T02](doc/resultados-t02.md) la [validación T03](doc/resultados-t03.md) y los [resultados T04](doc/resultados-t04.md).
+
+La vista se abre en [http://127.0.0.1:4173](http://127.0.0.1:4173). El [informe T05](doc/evidencia-t05/README.md) incluye el guion de comprensión y B05.
 
 ## Seguridad y publicación
 
