@@ -57,6 +57,34 @@ export interface AgreementView {
   canAdvance: boolean;
 }
 
+export interface SettlementReservation {
+  roundId: string;
+  version: number;
+  agreementHash: string;
+  transactionHash: string;
+  envelopeXdr: string;
+  operationCount: number;
+  maxTime: number;
+}
+
+export type SettlementOutcome =
+  | { state: "RECONCILING"; detail: "UNCONFIRMED" | "LEDGER_MISMATCH" }
+  | { state: "SETTLED" | "FAILED"; ledger: number; feeAtomic: string };
+
+export interface SettlementAttempt extends Omit<SettlementReservation, "envelopeXdr"> {
+  createdAt: number;
+  state: "SUBMITTED" | SettlementOutcome["state"];
+  detail: "UNCONFIRMED" | "LEDGER_MISMATCH" | null;
+  ledger: number | null;
+  feeAtomic: string | null;
+}
+
+const ATTEMPT_FIELDS = `
+  round_id AS roundId, version, agreement_hash AS agreementHash, transaction_hash AS transactionHash,
+  operation_count AS operationCount, max_time AS maxTime, created_at AS createdAt,
+  state, detail, ledger, fee_atomic AS feeAtomic
+`;
+
 export class AgreementError extends Error {
   constructor(
     public readonly code: "INVALID_INPUT" | "INVALID_CONSENT" | "INVALID_STATE"
@@ -118,6 +146,29 @@ const SCHEMA = `
     FOREIGN KEY (round_id, version, participant_id)
       REFERENCES synthetic_consents (round_id, version, participant_id)
   ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS settlement_attempts (
+    round_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    agreement_hash TEXT NOT NULL,
+    transaction_hash TEXT NOT NULL UNIQUE,
+    envelope_xdr TEXT NOT NULL,
+    operation_count INTEGER NOT NULL CHECK (operation_count > 0),
+    max_time INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('SUBMITTED', 'RECONCILING', 'SETTLED', 'FAILED')),
+    detail TEXT,
+    ledger INTEGER,
+    fee_atomic TEXT,
+    PRIMARY KEY (round_id, version),
+    FOREIGN KEY (round_id, version, agreement_hash)
+      REFERENCES agreement_versions (round_id, version, hash)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS settled_obligations (
+    obligation_id TEXT PRIMARY KEY,
+    transaction_hash TEXT NOT NULL REFERENCES settlement_attempts(transaction_hash)
+  ) STRICT;
 `;
 
 function isLive(status: VersionStatus): boolean {
@@ -130,7 +181,7 @@ export class AgreementStore {
   constructor(path: string, private readonly clock: () => number = Date.now) {
     this.db = new DatabaseSync(path);
     try {
-      this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+      this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL;");
       this.transaction(() => this.db.exec(SCHEMA));
     } catch (error) {
       this.db.close();
@@ -160,6 +211,7 @@ export class AgreementStore {
   closeRound(roundId: string, expectedVersion: number | null): void {
     this.transaction(() => {
       const latest = this.requireCurrent(roundId, expectedVersion);
+      this.requireNoPendingSettlement(roundId);
       const now = this.clock();
       if (latest) {
         const status = this.refreshStatus(latest.row, latest.agreement, now);
@@ -191,6 +243,7 @@ export class AgreementStore {
     }
     return this.transaction(() => {
       const latest = this.requireCurrent(roundId, expectedVersion);
+      this.requireNoPendingSettlement(roundId);
       const now = this.clock();
       if (draft.consentBy <= now) {
         throw new AgreementError("INVALID_INPUT", "Consent deadline must be in the future");
@@ -201,6 +254,11 @@ export class AgreementStore {
           throw new AgreementError("INVALID_STATE", "A completed zero-net round must be closed");
         }
         if (isLive(status)) this.updateStatus(roundId, latest.agreement.version, "SUPERSEDED");
+      }
+
+      const settled = this.db.prepare("SELECT 1 FROM settled_obligations WHERE obligation_id = ?");
+      if (draft.obligations.some(({ obligationId }) => settled.get(obligationId))) {
+        throw new AgreementError("INVALID_STATE", "An obligation was already settled");
       }
 
       const agreement: FrozenAgreement = {
@@ -266,6 +324,70 @@ export class AgreementStore {
       throw new AgreementError("INVALID_STATE", "Agreement lacks current unanimous Ed25519 consent");
     }
     return view;
+  }
+
+  findSettlementForVersion(roundId: string, version: number): SettlementAttempt | undefined {
+    return this.db.prepare(`
+      SELECT ${ATTEMPT_FIELDS} FROM settlement_attempts WHERE round_id = ? AND version = ?
+    `).get(roundId, version) as SettlementAttempt | undefined;
+  }
+
+  getSettlementByHash(hash: string): SettlementAttempt {
+    const attempt = this.db.prepare(`
+      SELECT ${ATTEMPT_FIELDS} FROM settlement_attempts WHERE transaction_hash = ?
+    `).get(hash) as SettlementAttempt | undefined;
+    if (!attempt) throw new AgreementError("NOT_FOUND", "Settlement attempt not found");
+    return attempt;
+  }
+
+  reserveSettlement(input: SettlementReservation): { attempt: SettlementAttempt; reserved: boolean } {
+    return this.transaction(() => {
+      const existing = this.findSettlementForVersion(input.roundId, input.version);
+      if (existing) return { attempt: existing, reserved: false };
+      const latest = this.requireCurrent(input.roundId, input.version);
+      const now = this.clock();
+      if (!latest || latest.row.hash !== input.agreementHash
+        || latest.row.status !== "APPROVED" || now >= latest.agreement.settleBy
+        || now >= input.maxTime * 1000 || latest.agreement.payments.length !== input.operationCount) {
+        throw new AgreementError("INVALID_STATE", "Settlement is no longer eligible for submission");
+      }
+      this.db.prepare(`
+        INSERT INTO settlement_attempts (round_id, version, agreement_hash, transaction_hash,
+          envelope_xdr, operation_count, max_time, created_at, state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED')
+      `).run(input.roundId, input.version, input.agreementHash, input.transactionHash,
+        input.envelopeXdr, input.operationCount, input.maxTime, now);
+      return { attempt: this.getSettlementByHash(input.transactionHash), reserved: true };
+    });
+  }
+
+  recordSettlementOutcome(hash: string, outcome: SettlementOutcome): SettlementAttempt {
+    return this.transaction(() => {
+      const attempt = this.getSettlementByHash(hash);
+      if (attempt.state === "SETTLED" || attempt.state === "FAILED") return attempt;
+      this.db.prepare(`
+        UPDATE settlement_attempts SET state = ?, detail = ?, ledger = ?, fee_atomic = ?
+        WHERE transaction_hash = ?
+      `).run(outcome.state, outcome.state === "RECONCILING" ? outcome.detail : null,
+        outcome.state === "RECONCILING" ? null : outcome.ledger,
+        outcome.state === "RECONCILING" ? null : outcome.feeAtomic, hash);
+      if (outcome.state === "SETTLED") {
+        const row = this.findVersion(attempt.roundId, attempt.version)!;
+        const agreement = this.decodeVersion(row);
+        const markSettled = this.db.prepare("INSERT INTO settled_obligations VALUES (?, ?)");
+        for (const { obligationId } of agreement.obligations) markSettled.run(obligationId, hash);
+        this.db.prepare("UPDATE rounds SET closed_at = ? WHERE id = ?").run(this.clock(), attempt.roundId);
+      }
+      return this.getSettlementByHash(hash);
+    });
+  }
+
+  private requireNoPendingSettlement(roundId: string): void {
+    if (this.db.prepare(`
+      SELECT 1 FROM settlement_attempts WHERE round_id = ? AND state IN ('SUBMITTED', 'RECONCILING')
+    `).get(roundId)) {
+      throw new AgreementError("INVALID_STATE", "Reconcile the existing settlement before changing the round");
+    }
   }
 
   private saveConsent(input: SyntheticConsent, signature?: string): AgreementView {
@@ -375,6 +497,9 @@ export class AgreementStore {
   }
 
   private refreshStatus(row: VersionRow, agreement: FrozenAgreement, now: number): VersionStatus {
+    if (row.status === "APPROVED" && this.findSettlementForVersion(agreement.roundId, agreement.version)) {
+      return row.status;
+    }
     if ((row.status === "PENDING_CONSENT" && now >= agreement.consentBy)
       || (row.status === "APPROVED" && now >= agreement.settleBy)) {
       this.updateStatus(agreement.roundId, agreement.version, "EXPIRED");
@@ -389,7 +514,8 @@ export class AgreementStore {
     return {
       agreement, hash, status, consents,
       validApprovalCount: isLive(status) ? consents.filter(({ decision }) => decision === "ACCEPT").length : 0,
-      canAdvance: status === "APPROVED",
+      canAdvance: status === "APPROVED"
+        && !this.findSettlementForVersion(agreement.roundId, agreement.version),
     };
   }
 }
