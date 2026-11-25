@@ -4,16 +4,16 @@
 
 Se prepara un repositorio público de CuyNexo con documentación inicial e issues sin asignar. Esto no aprueba implementación, no asigna trabajo a otras personas, no invita colaboradores y no completa el registro del Hub.
 
-## G0: decisiones técnicas aprobadas, 24 de noviembre de 2026
+## Autorización de implementación del 24 de noviembre de 2026
 
-Linder aprobó la base técnica del [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf):
+Linder autorizó implementar sin recortes la base técnica del [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf):
 
 - Una ronda activa por instalación local, con datos sintéticos de 3 a 8 participantes.
 - TypeScript para la implementación, SQLite para la persistencia del P0 y Horizon para la integración con Stellar testnet.
 - Stellar clásico para liquidar. En el caso base, cuatro participantes consienten la misma versión y los dos pagadores firman el mismo cuerpo de una transacción con tres pagos.
 - El primer bloque autorizado es el neteo local, con el caso de cuatro empresas y las pruebas A01–A03. ChatGPT implementa, Instinct verifica de forma independiente y Linder decide sobre la revisión y el avance.
 
-La aprobación conserva el alcance completo del plan. Los bloques de consentimiento, persistencia, firma, liquidación en testnet, recuperación por hash, vista local, comparación y entrega siguen en la secuencia v0.3. La librería concreta de Stellar se usará en la etapa de integración.
+El cierre de la revisión formal G0 queda sin acreditar en la documentación disponible. La autorización conserva el alcance completo del plan. Los bloques de consentimiento, persistencia, firma, liquidación en testnet, recuperación por hash, vista local, comparación y entrega siguen en la secuencia v0.3. La librería concreta de Stellar se usará en la etapa de integración.
 
 El cálculo de este bloque agrupa las obligaciones de la ronda completa conforme a la regla propuesta en la v0.3, incluso si su grafo tiene componentes desconectados. Una liquidación futura del resultado exige el consentimiento de todos los integrantes de la ronda. El cálculo por sí solo no autoriza pagos.
 
