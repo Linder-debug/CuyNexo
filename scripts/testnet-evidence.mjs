@@ -50,9 +50,12 @@ function publicResultCodes(codes) {
   return { transaction, operations };
 }
 
-export function writeTestnetEvidence(path, { scenario, status, addresses, before, after, transaction, committed, resultCodes }) {
+export function writeTestnetEvidence(path, {
+  scenario, status, addresses, before, after, transaction, committed, resultCodes, settlementState,
+}) {
   if (!["success", "failure"].includes(scenario)
-    || !["started", "prepared", "included", "verified", "incomplete"].includes(status)) {
+    || !["started", "prepared", "included", "verified", "incomplete"].includes(status)
+    || (settlementState !== undefined && !["RECONCILING", "SETTLED", "FAILED"].includes(settlementState))) {
     throw new Error("Invalid evidence scenario or status");
   }
   const hash = transaction?.hash().toString("hex") ?? null;
@@ -67,6 +70,7 @@ export function writeTestnetEvidence(path, { scenario, status, addresses, before
     scenario: scenario === "success" ? "B01" : "B02",
     network: "stellar-testnet",
     status,
+    ...(settlementState === undefined ? {} : { settlementState }),
     asset: "XLM",
     accounts: Object.fromEntries(["A", "B", "C", "D"].map((id) => [id, {
       address: publicAddress(addresses[id]),
