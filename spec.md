@@ -26,7 +26,7 @@ El plan usa cuatro empresas y compara 320 unidades de obligaciones brutas con 60
 
 - El neteo conserva el saldo neto de cada participante y produce el mismo resultado con las mismas entradas.
 - La validación rechaza entradas inválidas sin modificar el caso aprobado.
-- Las partes consienten la misma versión. Cualquier cambio invalida consentimientos anteriores según la regla acordada en G0.
+- Las partes consienten la misma versión. Cualquier cambio invalida consentimientos anteriores según la regla de versión del plan v0.3.
 - Los dos pagadores del caso base firman el mismo cuerpo de transacción.
 - La evidencia testnet demuestra tres pagos aplicados en el caso exitoso y ningún pago aplicado cuando falla el último. El tratamiento de comisiones y cuentas se documentará para no confundirlo con la aplicación de pagos.
 - Una respuesta perdida se recupera consultando el mismo hash sin duplicar la liquidación.
