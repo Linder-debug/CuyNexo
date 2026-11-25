@@ -1,6 +1,6 @@
 # Especificación inicial del P0
 
-Estado de esta rama: base técnica aprobada. Neteo, versiones con consentimiento Ed25519 y preparación clásica implementados para revisión local. El [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf) define la secuencia completa.
+Estado de esta rama: base técnica aprobada. Neteo, versiones con consentimiento Ed25519 preparación clásica y reconciliación por hash implementados para revisión local. El [plan v0.3](doc/1-CuyNexo_Plan_y_Especificacion_v0.3.pdf) define la secuencia completa.
 
 ## Objetivo
 
@@ -38,4 +38,4 @@ Mainnet y fondos reales, datos reales de empresas, demanda validada, crédito o 
 
 ## Evidencia por etapa
 
-A01–A03 corresponden al [neteo local](doc/resultados-neteo-a01-a03.md). [T02](doc/resultados-t02.md) cubre la persistencia local y las reglas de unanimidad, rechazo, reemplazo y vencimiento mediante decisiones sintéticas. [T03](doc/resultados-t03.md) prueba Ed25519, las firmas de pago y el XDR con claves efímeras. La evidencia de ejecución en testnet, la reconciliación por hash y el video siguen pendientes.
+A01–A03 corresponden al [neteo local](doc/resultados-neteo-a01-a03.md). [T02](doc/resultados-t02.md) cubre la persistencia local y las reglas de unanimidad, rechazo, reemplazo y vencimiento mediante decisiones sintéticas. [T03](doc/resultados-t03.md) prueba Ed25519, las firmas de pago y el XDR con claves efímeras. El [registro T03](doc/evidencia-t03/registro-ejecuciones.md) documenta B01 y B02 en testnet. [T04](doc/resultados-t04.md) valida la reconciliación por hash localmente. B04 en testnet, la vista y el video siguen pendientes.
