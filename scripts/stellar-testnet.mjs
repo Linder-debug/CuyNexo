@@ -1,27 +1,21 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Horizon, TransactionFailedError } from "@stellar/stellar-sdk";
 import { Keypair, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk/base";
 import { AgreementStore } from "../dist/agreements.js";
 import { signConsent } from "../dist/consents.js";
 import { StellarClassicAdapter } from "../dist/stellar-classic.js";
+import { nativeBalance, UNIT, writeTestnetEvidence } from "./testnet-evidence.mjs";
 
 const HORIZON = "https://horizon-testnet.stellar.org";
-const UNIT = 10_000_000n;
+const EVIDENCE_ROOT = fileURLToPath(new URL("../evidence/t03/", import.meta.url));
 const fixture = JSON.parse(readFileSync(new URL("../fixtures/cuatro-empresas.json", import.meta.url), "utf8"));
-
-function atomic(amount) {
-  const [whole, fraction = ""] = amount.split(".");
-  return BigInt(whole) * UNIT + BigInt(fraction.padEnd(7, "0"));
-}
 
 async function loadAccounts(server, addresses) {
   return Object.fromEntries(await Promise.all(Object.entries(addresses)
     .map(async ([id, address]) => [id, await server.loadAccount(address)])));
-}
-
-function nativeBalance(account) {
-  return atomic(account.balances.find(({ asset_type }) => asset_type === "native").balance);
 }
 
 async function setupAccounts(server, keys, addresses, scenario) {
@@ -43,11 +37,20 @@ async function setupAccounts(server, keys, addresses, scenario) {
 async function runScenario(scenario) {
   const server = new Horizon.Server(HORIZON);
   const store = new AgreementStore(":memory:");
+  let evidencePath;
+  let evidence;
   try {
     const keys = Object.fromEntries(fixture.participants.map((id) => [id, Keypair.random()]));
     const addresses = Object.fromEntries(Object.entries(keys).map(([id, key]) => [id, key.publicKey()]));
+    mkdirSync(EVIDENCE_ROOT, { recursive: true });
+    evidencePath = join(mkdtempSync(join(EVIDENCE_ROOT, scenario === "success" ? "B01-" : "B02-")), "evidence.json");
+    evidence = { scenario, addresses, status: "started" };
+    writeTestnetEvidence(evidencePath, evidence);
+    console.log(JSON.stringify({ evidencePath }));
     await setupAccounts(server, keys, addresses, scenario);
     const before = await loadAccounts(server, addresses);
+    evidence.before = before;
+    writeTestnetEvidence(evidencePath, evidence);
     if (scenario === "failure") {
       // B is a fresh XLM-only account. Even before subtracting reserve it cannot pay 10 XLM.
       assert.equal(nativeBalance(before.B), 2n * UNIT);
@@ -79,28 +82,34 @@ async function runScenario(scenario) {
 
     // Load a fresh authoritative view before submission, including the current local time window.
     const transaction = adapter.requireReady(prepared, signedAB);
+    Object.assign(evidence, { status: "prepared", transaction });
+    writeTestnetEvidence(evidencePath, evidence);
     console.log(JSON.stringify({ scenario, submittingHash: prepared.transactionHash }));
     let rejection;
     try {
       await server.submitTransaction(transaction);
     } catch (error) {
       const codes = error instanceof TransactionFailedError ? error.getResultCodes() : undefined;
-      if (scenario !== "failure" || codes?.transaction !== "tx_failed") {
+      evidence.resultCodes = codes;
+      if (codes?.transaction !== "tx_failed") {
         throw new Error("Submission outcome not accepted or unknown; check the printed hash before any retry.");
       }
-      assert.deepEqual(codes.operations, ["op_success", "op_success", "op_underfunded"]);
       rejection = codes;
     }
-    assert.equal(Boolean(rejection), scenario === "failure");
-
-    const committed = await server.transactions().transaction(prepared.transactionHash).includeFailed(true).call();
+    const committed = await server.transactions().transaction(prepared.transactionHash).call();
     assert.equal(committed.hash, prepared.transactionHash);
+    Object.assign(evidence, { committed, status: "included" });
+    writeTestnetEvidence(evidencePath, evidence);
+    const after = await loadAccounts(server, addresses);
+    evidence.after = after;
+    writeTestnetEvidence(evidencePath, evidence);
+    assert.equal(Boolean(rejection), scenario === "failure");
+    if (rejection) assert.deepEqual(rejection.operations, ["op_success", "op_success", "op_underfunded"]);
     assert.equal(committed.successful, scenario === "success");
     assert.equal(committed.operation_count, 3);
     const ledger = committed.ledger_attr ?? committed.ledger;
     assert.ok(Number.isInteger(ledger) && ledger > 0);
     const fee = BigInt(committed.fee_charged);
-    const after = await loadAccounts(server, addresses);
     const expected = scenario === "success" ? { A: -50n, B: -10n, C: 20n, D: 40n }
       : { A: 0n, B: 0n, C: 0n, D: 0n };
     const paymentsByAccount = Object.fromEntries(fixture.participants.map((id) => {
@@ -109,11 +118,19 @@ async function runScenario(scenario) {
       return [id, paymentDelta.toString()];
     }));
     assert.equal(BigInt(after.A.sequenceNumber()) - BigInt(before.A.sequenceNumber()), 1n);
+    evidence.status = "verified";
+    writeTestnetEvidence(evidencePath, evidence);
     console.log(JSON.stringify({
       scenario, hash: committed.hash, ledger,
       successful: committed.successful, feeAtomic: fee.toString(), paymentsByAccount,
       ...(rejection ? { resultCodes: rejection } : {}),
     }, null, 2));
+  } catch (error) {
+    if (evidence) {
+      evidence.status = "incomplete";
+      writeTestnetEvidence(evidencePath, evidence);
+    }
+    throw error;
   } finally {
     store.close();
   }
