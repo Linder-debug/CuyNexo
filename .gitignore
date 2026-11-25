@@ -5,3 +5,4 @@ dist/
 *.sqlite-shm
 *.sqlite-wal
 /evidence/t03/
+/evidence/b04/
