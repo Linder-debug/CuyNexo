@@ -41,7 +41,7 @@ test("B04: dos solicitudes, una transmisión y recuperación del mismo hash en o
   assert.equal(report.recovery.submitCalls, 0);
   assert.deepEqual(report.sourceHashes, [initial.hash]);
   assert.equal(report.operations.length, 3);
-  assert.equalBigInt(report.after.A.sequence) - BigInt(report.before.A.sequence), 1n);
+  assert.equal(BigInt(report.after.A.sequence) - BigInt(report.before.A.sequence), 1n);
   assert.equal(report.explorerUrl, null);
   assert.doesNotMatch(JSON.stringify(report), /envelope_xdr|\bS[A-Z2-7]{55}\b/);
 });
@@ -60,7 +60,7 @@ test("B04: sin confirmación sigue pendiente y el historial duplicado impide apr
   renameSync(hidden, ledger);
 
   const state = JSON.parse(readFileSync(ledger, "utf8"));
-  state.transactions.push{
+  state.transactions.push({
     ...state.transactions[0], hash: "b".repeat(64),
     source_account_sequence: (BigInt(state.transactions[0].source_account_sequence) + 1n).toString(),
   });
