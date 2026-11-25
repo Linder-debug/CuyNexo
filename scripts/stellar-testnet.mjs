@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Horizon, TransactionFailedError } from "@stellar/stellar-sdk";
 import { Keypair, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk/base";
 import { AgreementStore } from "../dist/agreements.js";
 import { signConsent } from "../dist/consents.js";
+import { lookupTransactionByHash } from "../dist/horizon-settlement.js";
+import { SettlementCoordinator } from "../dist/settlement-coordinator.js";
 import { StellarClassicAdapter } from "../dist/stellar-classic.js";
 import { nativeBalance, UNIT, writeTestnetEvidence } from "./testnet-evidence.mjs";
 
@@ -36,7 +38,7 @@ async function setupAccounts(server, keys, addresses, scenario) {
 
 async function runScenario(scenario) {
   const server = new Horizon.Server(HORIZON);
-  const store = new AgreementStore(":memory:");
+  let store;
   let evidencePath;
   let evidence;
   try {
@@ -44,9 +46,11 @@ async function runScenario(scenario) {
     const addresses = Object.fromEntries(Object.entries(keys).map(([id, key]) => [id, key.publicKey()]));
     mkdirSync(EVIDENCE_ROOT, { recursive: true });
     evidencePath = join(mkdtempSync(join(EVIDENCE_ROOT, scenario === "success" ? "B01-" : "B02-")), "evidence.json");
+    const journalPath = join(dirname(evidencePath), "settlement.sqlite");
+    store = new AgreementStore(journalPath);
     evidence = { scenario, addresses, status: "started" };
     writeTestnetEvidence(evidencePath, evidence);
-    console.log(JSON.stringify({ evidencePath }));
+    console.log(JSON.stringify({ evidencePath, journalPath }));
     await setupAccounts(server, keys, addresses, scenario);
     const before = await loadAccounts(server, addresses);
     evidence.before = before;
@@ -86,17 +90,31 @@ async function runScenario(scenario) {
     writeTestnetEvidence(evidencePath, evidence);
     console.log(JSON.stringify({ scenario, submittingHash: prepared.transactionHash }));
     let rejection;
-    try {
-      await server.submitTransaction(transaction);
-    } catch (error) {
-      const codes = error instanceof TransactionFailedError ? error.getResultCodes() : undefined;
-      evidence.resultCodes = codes;
-      if (codes?.transaction !== "tx_failed") {
-        throw new Error("Submission outcome not accepted or unknown; check the printed hash before any retry.");
-      }
-      rejection = codes;
+    let committed;
+    const coordinator = new SettlementCoordinator(store, {
+      async submit(tx) {
+        try {
+          await server.submitTransaction(tx);
+        } catch (error) {
+          rejection = error instanceof TransactionFailedError ? error.getResultCodes() : undefined;
+          evidence.resultCodes = rejection;
+          throw error;
+        }
+      },
+      async lookup(hash) {
+        committed = await lookupTransactionByHash(server, hash);
+        return committed;
+      },
+    });
+    const attempt = await coordinator.submit(prepared, signedAB);
+    evidence.settlementState = attempt.state;
+    if (attempt.state === "RECONCILING") {
+      console.log(JSON.stringify({ state: attempt.state, detail: attempt.detail, hash: attempt.transactionHash }));
+      throw new Error("Settlement pending. Reconcile the printed hash with the same journal.");
     }
-    const committed = await server.transactions().transaction(prepared.transactionHash).call();
+    if (rejection?.transaction !== "tx_failed" && scenario === "failure") {
+      throw new Error("The expected tx_failed response was not observed.");
+    }
     assert.equal(committed.hash, prepared.transactionHash);
     Object.assign(evidence, { committed, status: "included" });
     writeTestnetEvidence(evidencePath, evidence);
@@ -132,7 +150,7 @@ async function runScenario(scenario) {
     }
     throw error;
   } finally {
-    store.close();
+    store?.close();
   }
 }
 
