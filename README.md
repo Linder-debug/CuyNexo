@@ -2,7 +2,7 @@
 
 Prototipo de compensación multilateral de deudas entre pequeñas empresas, preparado para Stellar Codember Perú 2026.
 
-> Estado de esta rama: **vista local de revisión y comparación B05 reproducibles**. Los expedientes archivados incluyen éxito, fallo, rechazo y recuperación en Stellar testnet. La prueba de comprensión con personas está pendiente.
+> Estado de esta rama: **candidato T06 para revisión**. La vista local y B05 son reproducibles. G4 sigue abierto. Las capturas locales y públicas del explorador ya se generaron y quedan por incorporar al repositorio. El video y la revisión independiente siguen pendientes. La prueba de comprensión y la licencia siguen pendientes.
 
 ## Problema y propuesta
 
@@ -24,7 +24,7 @@ El ejemplo sintético del plan reduce el volumen bruto de 320 a 60 unidades, una
 
 ## Decisiones aprobadas
 
-TypeScript, SQLite, una ronda activa por instalación local con datos sintéticos y liquidación clásica mediante Horizon testnet. El [registro de decisiones](decisions.md) detalla el estado de cada etapa y cómo se revisa este bloque.
+TypeScript, SQLite, una ronda activa por instalación local con datos sintéticos y liquidación clásica mediante Horizon testnet. Linder autorizó implementar el plan v0.3 sin recortes el 24 de noviembre de 2026. La revisión formal G0 queda sin cierre acreditado. El [registro de decisiones](decisions.md) detalla el estado de cada etapa y cómo se revisa este bloque.
 
 ## Documentación
 
@@ -36,19 +36,39 @@ TypeScript, SQLite, una ronda activa por instalación local con datos sintético
 
 - [Arquitectura](doc/arquitectura.md) y [diagrama Mermaid](doc/diagrama-arquitectura.md).
 
-## Ejecución y evidencia
+## Reproducción local
 
-Con Node.js 22.13.0 o superior y el compilador del archivo de bloqueo ya instalado:
+Desde la raíz del repositorio, con Node.js **22.13.0 o superior**. La corrida T06 usó Node.js 24.22.3 y npm 11.19.1. Instala las versiones de `package-lock.json` por una de estas dos rutas:
 
 ```sh
-npm test
-npm run demo:neteo
-npm run demo:web
+# Si el registro de npm está disponible
+npm ci --ignore-scripts --no-audit --no-fund
+
+# En una máquina sin red, si la caché de npm está completa
+npm ci --offline --ignore-scripts --no-audit --no-fund
 ```
 
-Las pruebas y la demo se ejecutan localmente con datos sintéticos. Para preparar dependencias en un entorno sin red, `npm ci --offline --ignore-scripts --no-audit --no-fund` requiere que las dependencias fijadas en `package-lock.json` estén en la caché de npm. La demo imprime saldos, pagos y totales en unidades mínimas. Consulta los [resultados A01–A03](doc/resultados-neteo-a01-a03.md), los [resultados T02](doc/resultados-t02.md) la [validación T03](doc/resultados-t03.md) y los [resultados T04](doc/resultados-t04.md).
+La instalación puede omitirse si el árbol de dependencias fijado ya está instalado. A continuación, la compilación, las pruebas y las demos funcionan localmente:
 
-La vista se abre en [http://127.0.0.1:4173](http://127.0.0.1:4173). El [informe T05](doc/evidencia-t05/README.md) incluye el guion de comprensión y B05.
+```sh
+npm --offline test
+npm --offline run --silent demo:neteo
+npm --offline run --silent demo:b05
+npm --offline run demo:web
+```
+
+- Toda la suite pasó **54 de 54** en T06. El neteo imprime unidades mínimas y en el caso base devuelve `3200000000` brutas y `600000000` residuales.
+- B05 imprime JSON comparable con [B05.json](doc/evidencia-t05/B05.json). Los datos de testnet se leen del archivo local y las transferencias independientes se simulan.
+- Abre [http://127.0.0.1:4173](http://127.0.0.1:4173). Desde Resultado, alterna [B04 verificando](http://127.0.0.1:4173/?caso=b04-pendiente&empresa=C#resultado) y [B04 recuperado](http://127.0.0.1:4173/?caso=b04-recuperado&empresa=C#resultado) para seguir el mismo hash. Si el puerto está ocupado, inicia con `npm --offline run demo:web -- --port 4174`. Usa Ctrl+C para detenerlo.
+
+## Expediente de entrega
+
+- [Expediente A/B e informe de pruebas SDD](doc/evidencia-t06/expediente-sdd.md). Trazabilidad R01–R06, resultados y límites.
+- [Guion de demo e inventario de capturas](doc/evidencia-t06/demo.md) y [guion de comprensión](doc/evidencia-t05/comprension.md).
+- [Controles de gobernanza y seguridad](doc/evidencia-t06/gobernanza.md).
+- [Evidencia testnet archivada B01–B04](doc/evidencia-t04/registro-ejecuciones.md) y [comparación B05](doc/evidencia-t05/README.md).
+
+Quedan pendientes la prueba de comprensión con personas, la revisión independiente sin depender de Gonza, la incorporación de las capturas, el video y el acuerdo de licencia. Los tiempos envío→confirmación carecen de mediciones y las comisiones de las transferencias independientes no se modelaron.
 
 ## Seguridad y publicación
 
