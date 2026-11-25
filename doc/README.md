@@ -10,6 +10,8 @@ Materiales de referencia del 22 de noviembre de 2026 y documentación del bloque
 - [Resultados locales A01–A03](resultados-neteo-a01-a03.md).
 - [Resultados locales T02](resultados-t02.md).
 - [Validación local T03 y escenarios B01/B02](resultados-t03.md).
+- [Ejecuciones históricas B01/B02 en testnet](evidencia-t03/registro-ejecuciones.md).
+- [Resultados locales T04 y recuperación por hash](resultados-t04.md).
 
 ## Cómo interpretar estos materiales
 
