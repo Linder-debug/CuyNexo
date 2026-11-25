@@ -178,11 +178,14 @@ function isLive(status: VersionStatus): boolean {
 export class AgreementStore {
   private readonly db: DatabaseSync;
 
-  constructor(path: string, private readonly clock: () => number = Date.now) {
-    this.db = new DatabaseSync(path);
+  constructor(path: string, private readonly clock: () => number = Date.now, readOnly = false) {
+    this.db = new DatabaseSync(path, { readOnly });
     try {
-      this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL;");
-      this.transaction(() => this.db.exec(SCHEMA));
+      this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+      if (!readOnly) {
+        this.db.exec("PRAGMA synchronous = FULL;");
+        this.transaction(() => this.db.exec(SCHEMA));
+      }
     } catch (error) {
       this.db.close();
       throw error;
@@ -296,6 +299,19 @@ export class AgreementStore {
       const status = this.refreshStatus(row, agreement, this.clock());
       return this.view(agreement, row.hash, status, this.readConsents(roundId, version));
     });
+  }
+
+  inspectVersion(roundId: string, version: number) {
+    return this.transaction(() => {
+      const row = this.findVersion(roundId, version);
+      if (!row) throw new AgreementError("NOT_FOUND", "Agreement version not found");
+      const agreement = this.decodeVersion(row);
+      const status = this.refreshStatus(row, agreement, this.clock(), false);
+      return {
+        view: this.view(agreement, row.hash, status, this.readConsents(roundId, version)),
+        attempt: this.findSettlementForVersion(roundId, version),
+      };
+    }, "BEGIN");
   }
 
   recordConsent(input: SyntheticConsent): AgreementView {
@@ -439,8 +455,8 @@ export class AgreementStore {
     return result;
   }
 
-  private transaction<T>(action: () => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+  private transaction<T>(action: () => T, begin: "BEGIN" | "BEGIN IMMEDIATE" = "BEGIN IMMEDIATE"): T {
+    this.db.exec(begin);
     try {
       const result = action();
       this.db.exec("COMMIT");
@@ -496,13 +512,13 @@ export class AgreementStore {
       .run(status, roundId, version);
   }
 
-  private refreshStatus(row: VersionRow, agreement: FrozenAgreement, now: number): VersionStatus {
+  private refreshStatus(row: VersionRow, agreement: FrozenAgreement, now: number, persist = true): VersionStatus {
     if (row.status === "APPROVED" && this.findSettlementForVersion(agreement.roundId, agreement.version)) {
       return row.status;
     }
     if ((row.status === "PENDING_CONSENT" && now >= agreement.consentBy)
       || (row.status === "APPROVED" && now >= agreement.settleBy)) {
-      this.updateStatus(agreement.roundId, agreement.version, "EXPIRED");
+      if (persist) this.updateStatus(agreement.roundId, agreement.version, "EXPIRED");
       return "EXPIRED";
     }
     return row.status;
