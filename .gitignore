@@ -6,3 +6,4 @@ dist/
 *.sqlite-wal
 /evidence/t03/
 /evidence/b04/
+/evidence/b03/
