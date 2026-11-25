@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "scenario": "B02",
+  "network": "stellar-testnet",
+  "status": "verified",
+  "asset": "XLM",
+  "accounts": {
+    "A": {
+      "address": "GBRMQTMAAFWPCJL5G3URTPY77ACYYYZYMKEKRJHIYFRXZVLRQKXMIHNT",
+      "before": {
+        "balanceAtomic": "99979999900",
+        "sequence": "25377626017234945"
+      },
+      "after": {
+        "balanceAtomic": "99979999600",
+        "sequence": "25377626017234946"
+      }
+    },
+    "B": {
+      "address": "GA7EQVH6CH664T3SWC7NVUJQYBQ5WEYSGVVVLBTSHWTSMNRHDDRGGXRA",
+      "before": {
+        "balanceAtomic": "20000000",
+        "sequence": "25377638902136832"
+      },
+      "after": {
+        "balanceAtomic": "20000000",
+        "sequence": "25377638902136832"
+      }
+    },
+    "C": {
+      "address": "GALF6EHNLLGDJIJ3ZLRW5KMK6GVIVQQFTDM6T7D3ZC5J5N7VNBAGYB3F",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25377630312202240"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25377630312202240"
+      }
+    },
+    "D": {
+      "address": "GCIMUBRRWSFPXIYGCQJI2WACK3C4MF4W45GRP5VKN2IPXL77J7GDCBDK",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25377634607169536"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25377634607169536"
+      }
+    }
+  },
+  "operations": [
+    {
+      "index": 1,
+      "source": "GBRMQTMAAFWPCJL5G3URTPY77ACYYYZYMKEKRJHIYFRXZVLRQKXMIHNT",
+      "destination": "GALF6EHNLLGDJIJ3ZLRW5KMK6GVIVQQFTDM6T7D3ZC5J5N7VNBAGYB3F",
+      "amountAtomic": "200000000",
+      "resultCode": "op_success",
+      "applied": false
+    },
+    {
+      "index": 2,
+      "source": "GBRMQTMAAFWPCJL5G3URTPY77ACYYYZYMKEKRJHIYFRXZVLRQKXMIHNT",
+      "destination": "GCIMUBRRWSFPXIYGCQJI2WACK3C4MF4W45GRP5VKN2IPXL77J7GDCBDK",
+      "amountAtomic": "300000000",
+      "resultCode": "op_success",
+      "applied": false
+    },
+    {
+      "index": 3,
+      "source": "GA7EQVH6CH664T3SWC7NVUJQYBQ5WEYSGVVVLBTSHWTSMNRHDDRGGXRA",
+      "destination": "GCIMUBRRWSFPXIYGCQJI2WACK3C4MF4W45GRP5VKN2IPXL77J7GDCBDK",
+      "amountAtomic": "100000000",
+      "resultCode": "op_underfunded",
+      "applied": false
+    }
+  ],
+  "hash": "baf9d6aa89f056cfb06c0b8070371d97fa944442074f4a94b861278c51e9c85a",
+  "explorerUrl": "https://stellar.expert/explorer/testnet/tx/baf9d6aa89f056cfb06c0b8070371d97fa944442074f4a94b861278c51e9c85a",
+  "ledger": 5908693,
+  "successful": false,
+  "feeAtomic": "300",
+  "feeAccount": "GBRMQTMAAFWPCJL5G3URTPY77ACYYYZYMKEKRJHIYFRXZVLRQKXMIHNT",
+  "resultCodes": {
+    "transaction": "tx_failed",
+    "operations": [
+      "op_success",
+      "op_success",
+      "op_underfunded"
+    ]
+  }
+}
