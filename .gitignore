@@ -4,3 +4,4 @@ dist/
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
+/evidence/t03/
