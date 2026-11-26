@@ -87,6 +87,20 @@ export class StellarClassicAdapter {
     return transaction.toXDR();
   }
 
+  requiredAccounts(prepared: PreparedSettlement): string[] {
+    return [...this.inspectEnvelope(prepared, prepared.unsignedXdr).required];
+  }
+
+  mergePartial(prepared: PreparedSettlement, prior: string, partial: string, expected: string): string {
+    const base = this.inspectEnvelope(prepared, prior);
+    const next = this.inspectEnvelope(prepared, partial);
+    if (next.present.size !== 1 || !next.present.has(expected)) {
+      throw new SettlementError("BAD_SIGNATURE", "Unexpected partial signer");
+    }
+    if (!base.present.has(expected)) base.transaction.signatures.push(next.transaction.signatures[0]!);
+    return base.transaction.toXDR();
+  }
+
   requireReady(prepared: PreparedSettlement, envelopeXdr: string): Transaction {
     const { transaction, required, present } = this.inspectEnvelope(prepared, envelopeXdr);
     if (present.size !== required.size) {

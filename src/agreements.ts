@@ -9,6 +9,7 @@ export interface AgreementDraft extends NettingInput {
   transactionSourceId: string;
   feeCapAtomic: string;
   consentBy: number;
+  consentScheme?: "SEP-53";
   accounts?: Readonly<Record<string, string>>;
 }
 
@@ -224,7 +225,7 @@ export class AgreementStore {
     });
   }
 
-  freezeVersion(roundId: string, expectedVersion: number | null, draft: AgreementDraft): AgreementView {
+  freezeVersion(roundId: string, expectedVersion: number | null, draft: AgreementDraft, openNewRound = false): AgreementView {
     const netting = calculateNetting(draft);
     if (!draft.participants.includes(draft.transactionSourceId)
       || typeof draft.feeCapAtomic !== "string"
@@ -235,6 +236,9 @@ export class AgreementStore {
       throw new AgreementError("INVALID_INPUT", "Invalid transaction source, fee cap or consent deadline");
     }
     const accounts = draft.accounts;
+    if (draft.consentScheme !== undefined && (draft.consentScheme !== "SEP-53" || !accounts)) {
+      throw new AgreementError("INVALID_INPUT", "SEP-53 requires registered accounts");
+    }
     if (accounts !== undefined) {
       const entries = Object.entries(accounts ?? {});
       if (entries.length !== draft.participants.length
@@ -245,6 +249,18 @@ export class AgreementStore {
       }
     }
     return this.transaction(() => {
+      if (openNewRound) {
+        if (expectedVersion !== null || typeof roundId !== "string" || !roundId || /[^!-~]/.test(roundId)) {
+          throw new AgreementError("INVALID_INPUT", "Invalid new round");
+        }
+        const open = this.db.prepare("SELECT id FROM rounds WHERE closed_at IS NULL").get();
+        if (open) {
+          const previous = this.findVersion(String(open.id));
+          if (previous?.status !== "NET_ZERO") throw new AgreementError("ROUND_ACTIVE", "Active round exists");
+          this.db.prepare("UPDATE rounds SET closed_at=? WHERE id=?").run(this.clock(), open.id);
+        }
+        this.db.prepare("INSERT INTO rounds (id, created_at) VALUES (?, ?)").run(roundId, this.clock());
+      }
       const latest = this.requireCurrent(roundId, expectedVersion);
       this.requireNoPendingSettlement(roundId);
       const now = this.clock();
@@ -279,6 +295,7 @@ export class AgreementStore {
         consentBy: draft.consentBy,
         settleBy: draft.consentBy + SETTLEMENT_WINDOW_MS,
         specVersion: "0.3",
+        ...(draft.consentScheme ? { consentScheme: draft.consentScheme } : {}),
         ...(accounts === undefined ? {} : { accounts: { ...accounts } }),
       };
       const payload = canonicalJson(agreement);
@@ -335,7 +352,7 @@ export class AgreementStore {
           && vote.agreementHash === hash
           && verifiesConsent(accounts[participantId], {
             roundId, version, agreementHash: hash, participantId, decision: "ACCEPT", signature: vote.signature,
-          });
+          }, view.agreement.consentScheme);
       })) {
       throw new AgreementError("INVALID_STATE", "Agreement lacks current unanimous Ed25519 consent");
     }
@@ -421,7 +438,7 @@ export class AgreementStore {
       // Return eligibility failures inside the transaction so observed expiration is committed.
       if (now >= agreement.consentBy || !agreement.participants.includes(participantId)) return invalid;
       const account = agreement.accounts?.[participantId];
-      if (account ? signature === undefined || !verifiesConsent(account, { ...input, signature })
+      if (account ? signature === undefined || !verifiesConsent(account, { ...input, signature }, agreement.consentScheme)
         : signature !== undefined) return invalid;
       const latest = this.findVersion(roundId);
       const round = this.db.prepare("SELECT closed_at FROM rounds WHERE id = ?").get(roundId);
