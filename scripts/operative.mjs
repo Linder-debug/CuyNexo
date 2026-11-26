@@ -11,29 +11,37 @@ export function expect(condition, message) {
   if (!condition) throw Error(message);
 }
 
-// A persistent simulated ledger, shared by restarts. Only this transport is available here.
+import { testnetTransport } from './web-testnet.mjs';
 export class Operative {
-  constructor(path, clock = Date.now, mode = 'success') {
+  constructor(path, clock = Date.now, mode = 'success', createServer) {
     this.clock = clock;
-    expect(['success','failure','lost-response','before-send'].includes(mode),'Modo simulado inválido');
+    expect(['success','failure','lost-response','before-send','testnet'].includes(mode),'Modo simulado inválido');
     this.mode = mode;
     this.db = new DatabaseSync(path);
-    const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-    if (tables.length && !tables.some(t => t.name === 'cuynexo_simulation')) {
+    const marker = mode === 'testnet' ? 'cuynexo_testnet' : 'cuynexo_simulation';
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+      expect(!tables.length || tables.some(t => t.name === marker),
+        'Selecciona un diario exclusivo del transporte seleccionado');
+      this.db.exec(`CREATE TABLE IF NOT EXISTS ${marker} (id INTEGER PRIMARY KEY)`);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
       this.db.close();
-      throw Error('Selecciona un diario exclusivo de simulación');
+      throw error;
     }
-    this.db.exec('CREATE TABLE IF NOT EXISTS cuynexo_simulation (id INTEGER PRIMARY KEY)');
     this.store = new AgreementStore(path, clock);
     this.db.exec(`CREATE TABLE IF NOT EXISTS web_bodies (
       hash TEXT PRIMARY KEY, prepared TEXT NOT NULL, envelope TEXT NOT NULL, signers TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS web_retry (hash TEXT PRIMARY KEY, until_ms INTEGER NOT NULL);`);
+    if (mode !== 'testnet') this.db.exec(`
       CREATE TABLE IF NOT EXISTS simulated_receipts (hash TEXT PRIMARY KEY, receipt TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sim_fault (hash TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS sim_hidden (hash TEXT PRIMARY KEY);
-      CREATE TABLE IF NOT EXISTS simulated_calls (hash TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS web_retry (hash TEXT PRIMARY KEY, until_ms INTEGER NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS simulated_calls (hash TEXT NOT NULL);`);
     this.adapter = new StellarClassicAdapter(this.store, clock);
-    this.transport = {
+    this.transport = mode === 'testnet' ? testnetTransport(createServer) : {
       submit: async tx => {
         const hash = tx.hash().toString('hex');
         const first = this.db.prepare('INSERT OR IGNORE INTO sim_fault VALUES (?)').run(hash).changes;
@@ -92,8 +100,20 @@ export class Operative {
   prepare(hash) {
     const v = this.current(hash), a = v.agreement;
     if (this.body(hash)) return;
+    const ref = {roundId:a.roundId,version:a.version,hash};
+    if (this.mode === 'testnet') {
+      this.store.requireSignedAgreement(ref.roundId,ref.version,hash);
+      return this.transport.parameters(a.accounts[a.transactionSourceId]).then(({ sequence, fee }) => {
+        this.current(hash);
+        if (!this.body(hash)) this.saveBody(ref,sequence,fee);
+      });
+    }
     const sequence = this.db.prepare('SELECT COUNT(*) AS n FROM simulated_receipts').get().n;
-    const p = this.adapter.prepare({roundId:a.roundId,version:a.version,hash},String(sequence),'100');
+    this.saveBody(ref,String(sequence),'100');
+  }
+  saveBody(ref, sequence, fee) {
+    const hash = ref.hash;
+    const p = this.adapter.prepare(ref,sequence,fee);
     this.db.prepare('INSERT OR IGNORE INTO web_bodies VALUES (?,?,?,?)')
       .run(hash,JSON.stringify(p),p.unsignedXdr,'[]');
   }
@@ -118,7 +138,7 @@ export class Operative {
     const p = JSON.parse(b.prepared);
     if (action === 'submit') return this.coordinator.submit(p,b.envelope);
     expect(action === 'retry' && attempt,'Intento no disponible');
-    const state = await this.coordinator.reconcile(attempt.transactionHash);
+    const state = await this.coordinator.reconcile(attempt.transactionHash, this.transport.isAbsent);
     if (state.state !== 'RECONCILING') return state;
     expect(state.detail === 'UNCONFIRMED','Evidencia discordante');
     const claim = this.db.prepare(`INSERT INTO web_retry VALUES (?,?) ON CONFLICT(hash)

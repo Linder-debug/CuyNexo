@@ -63,14 +63,18 @@ export class SettlementCoordinator {
     return this.reconcile(attempt.transactionHash);
   }
 
-  async reconcile(hash: string): Promise<SettlementAttempt> {
+  async reconcile(hash: string, requireAbsent?: (error: unknown) => boolean): Promise<SettlementAttempt> {
     const attempt = this.store.getSettlementByHash(hash);
     if (attempt.state === "SETTLED" || attempt.state === "FAILED") return attempt;
     let receipt: SettlementReceipt;
     try {
       receipt = await this.transport.lookup(attempt.transactionHash);
-    } catch {
-      return this.store.recordSettlementOutcome(hash, { state: "RECONCILING", detail: "UNCONFIRMED" });
+    } catch (error) {
+      const pending = this.store.recordSettlementOutcome(hash, { state: "RECONCILING", detail: "UNCONFIRMED" });
+      if (pending.state === "RECONCILING" && requireAbsent && !requireAbsent(error)) {
+        throw new AgreementError("INVALID_STATE", "Consulta inconclusa; retransmisión bloqueada");
+      }
+      return pending;
     }
     return this.store.recordSettlementOutcome(hash, verifyReceipt(attempt, receipt));
   }

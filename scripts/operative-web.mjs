@@ -13,8 +13,8 @@ const files = new Map(Object.entries({
   '/archivo.json':'doc/evidencia-t04/B01.json','/b05.json':'doc/evidencia-t05/B05.json',
   '/wallet.js':'node_modules/@stellar/varial-sdk/build/index.min.js','/fixture.json':'fixtures/cuatro-empresas.json'
 }));
-export function application(path, clock = Date.now, mode = 'success') {
-  const service = new Operative(path,clock,mode), sessions = new Map(), challenges = new Map();
+export function application(path, clock = Date.now, mode = 'success', createServer) {
+  const service = new Operative(path,clock,mode,createServer), sessions = new Map(), challenges = new Map();
   let code = token();
   const initialCode = code;
   const server = http.createServer(async (req,res) => {
@@ -34,7 +34,12 @@ export function application(path, clock = Date.now, mode = 'success') {
       res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
       if (req.method === 'GET' && files.has(req.url)) {
         res.setHeader('Content-Type',({'/':'text/html; charset=utf-8','/style.css':'text/css','/fixture.json':'application/json','/archivo.json':'application/json','/b05.json':'application/json'})[req.url] ?? 'text/javascript');
-        return res.end(await readFile(new URL('../'+files.get(req.url),import.meta.url)));
+        const bytes = await readFile(new URL('../'+files.get(req.url),import.meta.url));
+        if (req.url === '/' && mode === 'testnet') {
+          return res.end(bytes.toString().replace('Simulación local · pagos sin conexión a la red','Stellar TESTNET · activos de prueba')
+            .replace('Enviar al simulador','Enviar a Stellar testnet'));
+        }
+        return res.end(bytes);
       }
       expect(req.method === 'POST' && req.headers.origin === origin && req.headers['content-type'] === 'application/json','Petición inválida');
       let size = 0; const chunks = [];
@@ -69,12 +74,12 @@ export function application(path, clock = Date.now, mode = 'success') {
         const v = service.latest(); expect(v && v.agreement.roundId === actor.round &&
           v.agreement.accounts[actor.id] === actor.address,'Cuenta modificada');
       }
-      if (action === 'state') return json({...service.state(actor),actor:actor.kind,id:actor.id,address:actor.address});
+      if (action === 'state') return json({...service.state(actor),transport:mode === 'testnet' ? 'testnet' : 'simulation',actor:actor.kind,id:actor.id,address:actor.address});
       if (action === 'lookup') { await service.settle(b.hash,'lookup'); return json({}); }
       if (actor.kind === 'coordinator') {
         if (action === 'calculate') return json(calculateNetting(b.input));
         if (action === 'freeze') service.freeze(b.input,b.previous);
-        else if (action === 'prepare') service.prepare(b.hash);
+        else if (action === 'prepare') await service.prepare(b.hash);
         else if (['retry','submit'].includes(action)) await service.settle(b.hash,action);
         else throw Error('Acción no autorizada');
       } else if (action === 'message') return json({message:service.message(b.hash,actor,b.decision)});
@@ -89,6 +94,12 @@ export function application(path, clock = Date.now, mode = 'success') {
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   process.umask(0o077);
-  const app = application(process.env.CUYNEXO_DB ?? 'cuynexo-web.sqlite', Date.now, process.env.CUYNEXO_SIM ?? 'success');
-  app.server.listen(8765,'127.0.0.1',()=>console.log('Simulación local: http://127.0.0.1:8765/\nCódigo de coordinador (uso único): '+app.code));
+  const transport = process.env.CUYNEXO_TRANSPORT ?? 'simulation';
+  expect(['simulation','testnet'].includes(transport),'Transporte desconocido');
+  const mode = transport === 'testnet' ? 'testnet' : (process.env.CUYNEXO_SIM ?? 'success');
+  expect(transport === 'testnet' || mode !== 'testnet','Selecciona testnet mediante CUYNEXO_TRANSPORT');
+  expect(process.stdout.isTTY, 'Inicia desde una terminal privada sin redirigir la salida');
+  const path = process.env.CUYNEXO_DB ?? (transport === 'testnet' ? 'cuynexo-testnet.sqlite' : 'cuynexo-web.sqlite');
+  const app = application(path,Date.now,mode);
+  app.server.listen(8765,'127.0.0.1',()=>console.log(transport+' · http://127.0.0.1:8765/\nCódigo de coordinador (uso único): '+app.code));
 }

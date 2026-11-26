@@ -5,17 +5,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { Keypair, Networks, TransactionBuilder } from '@stellar/stellar-sdk/base';
+import { NotFoundError } from '@stellar/stellar-sdk';
 import { application } from '../scripts/operative-web.mjs';
 import { Operative } from '../scripts/operative.mjs';
 
 const fixture=JSON.parse(readFileSync(new URL('../fixtures/cuatro-empresas.json',import.meta.url)));
 const sign=(key,text)=>key.sign(createHash('sha256').update('Stellar Signed Message:\n').update(text).digest()).toString('base64');
-function lab(t,input=fixture) {
+function lab(t,input=fixture,mode='success',createServer) {
   const dir=mkdtempSync(join(tmpdir(),'cuynexo-test-')), path=join(dir,'lab.sqlite');
   const keys=Object.fromEntries(input.participants.map(id=>[id,Keypair.random()]));
   const accounts=Object.fromEntries(Object.entries(keys).map(([k,v])=>[k,v.publicKey()]));
   const l={now:Date.now(),path,keys,accounts};
-  l.s=new Operative(path,()=>l.now);
+  l.s=new Operative(path,()=>l.now,mode,createServer);
   const draft={...input,accounts,consentBy:l.now+10000,transactionSourceId:input.participants[0]};
   l.view=l.s.freeze(draft,null);
   l.actor=id=>({kind:'participant',id,address:accounts[id],round:l.view.agreement.roundId});
@@ -29,7 +30,7 @@ function lab(t,input=fixture) {
     const tx=TransactionBuilder.fromXDR(p.unsignedXdr,Networks.TESTNET);
     tx.sign(keys[as]);l.s.partial(l.view.hash,l.actor(id),tx.toXDR());
   };
-  l.restart=()=>{l.s.close();l.s=new Operative(path,()=>l.now);};
+  l.restart=()=>{l.s.close();l.s=new Operative(path,()=>l.now,mode,createServer);};
   t.after(()=>{l.s.close();rmSync(dir,{recursive:true,force:true});});
   return l;
 }
@@ -172,4 +173,68 @@ test('P0: fallo simulado no aplica pagos y un intento discordante no se retransm
   l.s.transport.lookup=lookup;
   assert.equal((await l.s.settle(l.view.hash,'lookup')).state,'FAILED');
   assert.equal(l.s.db.prepare('SELECT count(*) n FROM settled_obligations').get().n,0);
+});
+
+test('Web testnet: inicio pasivo, secuencia y comisión externas, recuperación exacta sin tráfico externo',async t=>{
+  let clients=0, queries=0, tx, lookupError=Error('Horizon indisponible'), address;
+  const calls=[];
+  const server={
+    async loadAccount(id){address=id; return {sequenceNumber:()=>'98765432100000000'};},
+    async fetchBaseFee(){return 120;},
+    async submitTransaction(value){tx=value; calls.push(value.toXDR()); throw Error('respuesta perdida');},
+    transactions(){return {transaction:hash=>({call:async()=>{
+      queries++;
+      assert.equal(hash,tx.hash().toString('hex'));
+      if(lookupError)throw lookupError;
+      return {hash,successful:true,envelope_xdr:tx.toXDR(),operation_count:3,ledger_attr:123,fee_charged:'360'};
+    }})};}
+  };
+  const l=lab(t,fixture,'testnet',()=>{clients++;return server;});
+  assert.equal(clients,0);
+  assert.throws(()=>new Operative(l.path),/diario exclusivo/);
+  assert.throws(()=>l.s.prepare(l.view.hash));
+  for(const id of fixture.participants)l.vote(id);
+  assert.equal(clients,0);
+  await l.s.prepare(l.view.hash);
+  const frozen=JSON.parse(l.s.body(l.view.hash).prepared);
+  const payable=TransactionBuilder.fromXDR(frozen.unsignedXdr,Networks.TESTNET);
+  assert.equal(address,l.accounts.A);
+  assert.equal(payable.sequence,'98765432100000001');
+  assert.equal(payable.fee,'360');
+  l.partial('A');l.restart();l.partial('B');
+  assert.equal((await l.s.settle(l.view.hash,'submit')).state,'RECONCILING');
+  l.restart();
+  assert.equal((await l.s.settle(l.view.hash,'lookup')).state,'RECONCILING');
+  await assert.rejects(l.s.settle(l.view.hash,'retry'),/inconclusa/);
+  assert.equal(calls.length,1);
+  lookupError=new NotFoundError('Not found',{status:404});
+  await l.s.settle(l.view.hash,'retry');
+  assert.equal(calls.length,2);assert.equal(calls[0],calls[1]);
+  lookupError=null;
+  assert.equal((await l.s.settle(l.view.hash,'lookup')).state,'SETTLED');
+  assert.equal(calls.length,2);assert.ok(queries>=5);
+});
+
+test('Web testnet: una BD de simulación y una comisión fuera del límite bloquean la preparación',async t=>{
+  const sim=lab(t);
+  assert.throws(()=>new Operative(sim.path,Date.now,'testnet'),/diario exclusivo/);
+  const l=lab(t,fixture,'testnet',()=>({
+    loadAccount:async()=>({sequenceNumber:()=>'42'}),fetchBaseFee:async()=>999999
+  }));
+  fixture.participants.forEach(id=>l.vote(id));
+  await assert.rejects(l.s.prepare(l.view.hash));
+  assert.equal(l.s.body(l.view.hash),undefined);
+});
+
+test('Web testnet: la portada identifica el modo sin inicializar Horizon',async t=>{
+  const dir=mkdtempSync(join(tmpdir(),'cuynexo-mode-'));
+  let clients=0;
+  const app=application(join(dir,'db'),Date.now,'testnet',()=>{clients++;throw Error('Acceso inesperado');});
+  await new Promise(ok=>app.server.listen(0,'127.0.0.1',ok));
+  t.after(async()=>{await new Promise(ok=>app.server.close(ok));rmSync(dir,{recursive:true,force:true});});
+  const page=await (await fetch('http://127.0.0.1:'+app.server.address().port)).text();
+  assert.match(page,/Stellar TESTNET/);
+  assert.match(page,/Enviar a Stellar testnet/);
+  assert.doesNotMatch(page,/Enviar al simulador/);
+  assert.equal(clients,0);
 });

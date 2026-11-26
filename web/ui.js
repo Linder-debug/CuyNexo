@@ -32,7 +32,7 @@ function draw() {
   const attempt=s.attempt, own=a?.balances.find(x=>x.participantId===s.id);
   let outcome=attempt?.state??s.status??'Sin intento';
   if(attempt) outcome+=' · '+attempt.transactionHash;
-  if(attempt?.state==='RECONCILING') outcome+='\nVerificando en el simulador. El resultado aún no se conoce.';
+  if(attempt?.state==='RECONCILING') outcome+='\nVerificando en '+(s.transport==='testnet'?'Stellar testnet':'el simulador')+'. El resultado aún no se conoce.';
   if(own && BigInt(own.amountAtomic)>0n) outcome+='\n'+(attempt?.state==='FAILED'?'Recibido: 0':attempt?.state==='SETTLED'?'Recibido: '+amount(own.amountAtomic):'Por recibir: '+amount(own.amountAtomic))+' XLM';
   if(!attempt && own && BigInt(own.amountAtomic)>0n && s.transactionHash && missing.length) outcome+=' · Falta: '+missing.join(', ');
   el('result').textContent=outcome;
@@ -44,8 +44,11 @@ function draw() {
 }
 async function refresh(){state=await api('state');draw();}
 async function account() {
-  const r=await freighterApi.requestAccess(), n=await freighterApi.getNetwork();
-  if(r.error||n.networkPassphrase!==net) throw Error('Conecta la cuenta de prueba en Testnet');
+  if (!window.freighterApi) throw Error('Cliente Varial no disponible');
+  const r=await freighterApi.requestAccess();
+  if (r.error || !r.address) throw Error('Acceso cancelado o cuenta de Varial no disponible');
+  const n=await freighterApi.getNetwork();
+  if(n.error||n.networkPassphrase!==net) throw Error('Conecta la cuenta de prueba en Testnet');
   if(state.address && state.address!==r.address){await api('logout');state={};draw();throw Error('Cuenta modificada. Identifícate de nuevo');}
   return r.address;
 }
