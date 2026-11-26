@@ -75,10 +75,12 @@ export function application(path, clock = Date.now, mode = 'success', createServ
           v.agreement.accounts[actor.id] === actor.address,'Cuenta modificada');
       }
       if (action === 'state') return json({...service.state(actor),transport:mode === 'testnet' ? 'testnet' : 'simulation',actor:actor.kind,id:actor.id,address:actor.address});
-      if (action === 'lookup') { await service.settle(b.hash,'lookup'); return json({}); }
+      if (action === 'export') return json(service.evidence.report(service.current(b.hash)));
+      if (action === 'lookup') { await service.verify(b.hash); return json({}); }
       if (actor.kind === 'coordinator') {
         if (action === 'calculate') return json(calculateNetting(b.input));
         if (action === 'freeze') service.freeze(b.input,b.previous);
+        else if (action === 'cancel') service.cancel(b.hash);
         else if (action === 'prepare') await service.prepare(b.hash);
         else if (['retry','submit'].includes(action)) await service.settle(b.hash,action);
         else throw Error('Acción no autorizada');

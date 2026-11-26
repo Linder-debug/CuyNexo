@@ -238,3 +238,52 @@ test('Web testnet: la portada identifica el modo sin inicializar Horizon',async 
   assert.doesNotMatch(page,/Enviar al simulador/);
   assert.equal(clients,0);
 });
+
+test('Complemento P0: cancelación de una versión con parcial conservado, antes de reservar',async t=>{
+  const l=lab(t);l.prepare();l.partial('A');
+  const hash=l.view.hash;
+  l.s.cancel(hash);l.restart();
+  assert.equal(l.s.latest().status,'CANCELLED');
+  assert.equal(l.s.state(l.actor('B')).unsignedXdr,undefined);
+  assert.throws(()=>l.vote('B'));
+  assert.throws(()=>l.s.prepare(hash));assert.throws(()=>l.partial('B'));
+  await assert.rejects(l.s.settle(hash,'submit'));
+  assert.equal(l.s.body(hash) && l.s.state().signers.length,1);
+  assert.equal(l.s.state().attempt,undefined);
+});
+
+test('Complemento P0: evidencia por hash y empresa, saldos incompletos y cronometraje persistente',async t=>{
+  let calls=0,receipt;
+  const fake={
+    async loadAccount(address){
+      if(address===l.accounts.D) throw Error('dato ausente');
+      const balances={A:'949.9999700',B:'990',C:'1020',D:'1040'};
+      const id=Object.keys(l.accounts).find(k=>l.accounts[k]===address);
+      return {sequenceNumber:()=>'10',balances:[{asset_type:'native',balance:receipt?balances[id]:'1000'}]};
+    },
+    async fetchBaseFee(){return 100;},
+    async submitTransaction(tx){
+      calls++;l.now+=4500;
+      receipt={hash:tx.hash().toString('hex'),successful:true,ledger_attr:88,fee_charged:'300',fee_account:l.accounts.A,
+        operation_count:3,envelope_xdr:tx.toXDR()};
+    },
+    transactions(){return {transaction:hash=>({call:async()=>{assert.equal(hash,receipt.hash);return receipt;}})};}
+  };
+  const l=lab(t,fixture,'testnet',()=>fake),hash=l.view.hash;
+  fixture.participants.forEach(id=>l.vote(id));await l.s.prepare(hash);
+  const first=l.s.state().evidence;
+  assert.equal(first.companies[0].pay,'500000000');
+  assert.equal(first.companies[0].received,null);
+  l.partial('A');l.partial('B');await l.s.settle(hash,'submit');
+  assert.throws(()=>l.s.cancel(hash));
+  l.restart();await l.s.verify(hash);
+  const e=l.s.state().evidence;
+  assert.equal(calls,1);assert.equal(e.elapsedMs,4500);assert.equal(e.operations.length,3);
+  assert.equal(e.companies[2].received,'200000000');assert.equal(e.companies[0].feeAtomic,'300');
+  assert.equal(e.companies[1].feeAtomic,'0');assert.equal(e.companies[0].before.amountAtomic,'10000000000');
+  assert.equal(e.companies[0].after.amountAtomic,'9499999700');assert.equal(e.companies[3].before,null);
+  assert.equal(e.feeAccount,l.accounts.A);assert.equal(e.decisions.length,4);
+  const json=JSON.stringify(e);
+  assert.ok(!json.includes(receipt.envelope_xdr));assert.ok(!json.includes(l.s.latest().consents[0].signature));
+  assert.ok(!json.includes(l.keys.A.secret()));
+});

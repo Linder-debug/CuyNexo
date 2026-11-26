@@ -2,7 +2,7 @@
 
 Prototipo de compensación multilateral de deudas entre pequeñas empresas, preparado para Stellar Codember Perú 2026. [Repositorio en GitHub](https://github.com/Linder-debug/CuyNexo).
 
-> **Estado para revisión.** La web operativa usa transporte simulado por defecto. Se preparó un transporte optativo hacia Horizon testnet. La integración con el servicio externo y el recorrido completo desde CuyNexo con Varial real quedan pendientes de ejecución. G4 continúa abierto.
+> **Estado para revisión.** La web operativa usa transporte simulado por defecto. Se preparó un transporte optativo hacia Horizon testnet. W01 registra el recorrido con Varial real y tres pagos en testnet. Los nuevos controles de evidencia y cancelación se verificaron localmente. G4 continúa abierto.
 
 ## Web operativa y alcance de las evidencias
 
@@ -15,6 +15,16 @@ Desde una terminal privada, con las dependencias fijadas instaladas, ejecuta `np
 | Testnet archivada | B01, B02, B03 y B04 proceden de las corridas históricas documentadas. Los enlaces inferiores identifican transacciones anteriores a esta integración web. |
 
 [Procedimiento por rol, selección de transporte y matriz R01–R06](doc/varial-horizon.md).
+
+### Arranque en modo testnet
+
+En una terminal privada e interactiva, desde la raíz con las dependencias instaladas:
+
+```bash
+CUYNEXO_TRANSPORT=testnet npm run p0:web
+```
+
+Abre http://127.0.0.1:8765 y comprueba **Stellar TESTNET**. El comando inicia el servidor. La carga, los consentimientos, las firmas y el envío siguen realizándose desde las pantallas. En Acuerdo, el coordinador puede cancelar una versión activa hasta que se reserve el intento. En Resultado, **Verificar resultado por hash** consulta el intento y **Descargar evidencia de la ronda** genera el JSON saneado sin enviar pagos. [Cobertura y límites de este bloque](doc/resultados-controles-web.md).
 
 ## Problema y propuesta
 

@@ -35,11 +35,28 @@ function draw() {
   if(attempt?.state==='RECONCILING') outcome+='\nVerificando en '+(s.transport==='testnet'?'Stellar testnet':'el simulador')+'. El resultado aún no se conoce.';
   if(own && BigInt(own.amountAtomic)>0n) outcome+='\n'+(attempt?.state==='FAILED'?'Recibido: 0':attempt?.state==='SETTLED'?'Recibido: '+amount(own.amountAtomic):'Por recibir: '+amount(own.amountAtomic))+' XLM';
   if(!attempt && own && BigInt(own.amountAtomic)>0n && s.transactionHash && missing.length) outcome+=' · Falta: '+missing.join(', ');
+  const e=s.evidence, rows=e?.companies.filter(x=>admin||x.id===s.id)??[];
+  const xlm = n=>n==null?'sin dato':amount(n)+' XLM';
+  el('impact').textContent=rows.map(x=>x.id+' · paga '+xlm(x.pay)+' · recibe '+xlm(x.receive)+
+    ' · comisión prevista: '+(x.plannedFeePayer?(e.plannedFeeAtomic?xlm(e.plannedFeeAtomic):'a su cargo; importe pendiente'):'0 XLM')).join('\n');
+  el('verified').textContent=e?[
+    ...rows.map(x=>x.id+' · pagado '+xlm(x.paid)+' · recibido '+xlm(x.received)+' · comisión cobrada '+xlm(x.feeAtomic)+
+      '\nSaldo antes '+xlm(x.before?.amountAtomic)+' · después '+xlm(x.after?.amountAtomic)),
+    'Comisión total cobrada: '+xlm(e.feeAtomic)+' · cuenta: '+(e.feeAccount??'sin dato'),
+    'Ledger: '+(e.ledger??'sin dato')+' · envío a confirmación observada: '+(e.elapsedMs==null?'sin dato':e.elapsedMs+' ms'),
+    ...(e.operations??[]).map(op=>op.index+'. '+op.source+' → '+op.destination+' · '+op.amountXlm+' XLM · '+(op.applied?'aplicada':'sin aplicar')),
+    ...e.limits].join('\n'):'';
+  for(const section of ['ob','ac','au','re']) {
+    const heading=el(section).querySelector('h2');
+    heading.dataset.origin=s.transport==='testnet'?'Testnet':s.transport==='simulation'?'Simulación':'';
+  }
+  el('cancel').disabled=!admin||!!attempt||!['PENDING_CONSENT','APPROVED'].includes(s.status);
+  el('download').disabled=!e;
   el('result').textContent=outcome;
   el('prepare').disabled=!admin||s.status!=='APPROVED'||!!s.transactionHash;
   el('accept').disabled=el('reject').disabled=!participant||s.status!=='PENDING_CONSENT'||s.votes.some(v=>v.participantId===s.id);
   el('partial').disabled=!s.unsignedXdr||!missing.includes(s.id)||!!attempt;
-  el('submit').disabled=!admin||!s.transactionHash||missing.length>0||!!attempt;
+  el('submit').disabled=s.status!=='APPROVED'||!admin||!s.transactionHash||missing.length>0||!!attempt;
   el('lookup').disabled=!attempt; el('retry').disabled=!admin||attempt?.detail!=='UNCONFIRMED';
 }
 async function refresh(){state=await api('state');draw();}
@@ -79,3 +96,14 @@ action('partial',async()=>{const hash=state.hash,address=await account();
   await api('partial',{hash,xdr:r.signedTxXdr});await refresh();});
 for(const id of ['prepare','submit','lookup','retry'])action(id,async()=>{await api(id,{hash:state.hash});await refresh();});
 action('refresh',refresh);draw();refresh().catch(()=>{});
+
+action('cancel',async()=>{
+  if(!window.confirm('¿Cancelar esta versión y bloquear sus firmas y envío?'))return;
+  await api('cancel',{hash:state.hash});await refresh();
+});
+action('download',async()=>{
+  const report=await api('export',{hash:state.hash});
+  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='CuyNexo-'+report.agreementHash+'.json';
+  link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});

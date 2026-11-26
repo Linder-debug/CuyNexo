@@ -1,7 +1,8 @@
 
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,rmSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 const req=createRequire(process.cwd()+'/package.json');
@@ -31,6 +32,9 @@ try {
   await admin.$eval('#accounts',(e,x)=>e.value=x,JSON.stringify(Object.fromEntries(Object.entries(keys).map(([id,k])=>[id,k.publicKey()]))));
   await click(admin,'calculate',"document.querySelector('#summary').textContent.includes('320')");
   await click(admin,'freeze',"document.querySelector('#agreement').textContent.includes('PENDING_CONSENT')");
+  admin.once('dialog',dialog=>dialog.accept());
+  await click(admin,'cancel',"document.querySelector('#agreement').textContent.includes('CANCELLED')");
+  await click(admin,'freeze',"document.querySelector('#agreement').textContent.includes('PENDING_CONSENT')");
   const pages={};
   for(const [id,k] of Object.entries(keys)){
     const p=pages[id]=await page();
@@ -48,5 +52,18 @@ try {
   await click(admin,'refresh',"!document.querySelector('#submit').disabled");await click(admin,'submit',"document.querySelector('#result').textContent.includes('RECONCILING')");
   await click(pages.C,'refresh',"!document.querySelector('#lookup').disabled");
   await click(pages.C,'lookup',"document.querySelector('#result').textContent.includes('Recibido: 20 XLM')");
+  assert.match(await pages.C.$eval('#verified',e=>e.textContent),/recibido 20 XLM/);
+  await pages.C.browserContext().setDownloadBehavior({policy:'allow',downloadPath:dir});
+  const download=pages.C.waitForResponse(r=>r.url()===origin+'/export');
+  await click(pages.C,'download');
+  const evidence=await (await download).json();
+  const path=join(dir,'CuyNexo-'+evidence.agreementHash+'.json');
+  let saved;
+  for(let i=0;i<50;i++){
+    try{saved=JSON.parse(readFileSync(path,'utf8'));break;}catch{await new Promise(ok=>setTimeout(ok,100));}
+  }
+  assert.deepEqual(saved,evidence);
+  assert.equal(saved.operations.length,3);
+  assert.equal(saved.result,'SETTLED');
   console.log('PASS Chromium: 5 sesiones, 4 consentimientos, 2 firmas, respuesta perdida y recuperación de C. Wallet de prueba.');
 } finally {await browser.close();await new Promise(done=>app.server.close(done));rmSync(dir,{recursive:true,force:true});}

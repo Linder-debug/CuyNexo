@@ -11,6 +11,7 @@ export function expect(condition, message) {
   if (!condition) throw Error(message);
 }
 
+import { RoundEvidence } from './round-evidence.mjs';
 import { testnetTransport } from './web-testnet.mjs';
 export class Operative {
   constructor(path, clock = Date.now, mode = 'success', createServer) {
@@ -46,6 +47,7 @@ export class Operative {
         const hash = tx.hash().toString('hex');
         const first = this.db.prepare('INSERT OR IGNORE INTO sim_fault VALUES (?)').run(hash).changes;
         if (first && this.mode === 'before-send') throw Error('Interrupción simulada anterior a la llamada');
+        this.evidence.markSent(hash);
         this.db.prepare('INSERT INTO simulated_calls VALUES (?)').run(hash);
         const receipt = {hash, successful:this.mode !== 'failure', envelope_xdr:tx.toXDR(),
           operation_count:tx.operations.length, ledger_attr:1, fee_charged:tx.fee};
@@ -63,7 +65,18 @@ export class Operative {
         return JSON.parse(row.receipt);
       }
     };
-    this.coordinator = new SettlementCoordinator(this.store,this.transport,clock);
+    this.evidence = new RoundEvidence(this);
+    this.coordinator = new SettlementCoordinator(this.store,{
+      submit: async tx => {
+        if (this.mode==='testnet') await this.evidence.beforeSend(tx);
+        return this.transport.submit(tx);
+      },
+      lookup: async hash => {
+        const receipt = await this.transport.lookup(hash);
+        await this.evidence.observe(hash,receipt);
+        return receipt;
+      }
+    },clock);
   }
   close() { this.db.close(); this.store.close(); }
   latest() {
@@ -99,6 +112,7 @@ export class Operative {
   body(hash) { return this.db.prepare('SELECT * FROM web_bodies WHERE hash=?').get(hash); }
   prepare(hash) {
     const v = this.current(hash), a = v.agreement;
+    expect(v.status === 'APPROVED','Versión no aprobada');
     if (this.body(hash)) return;
     const ref = {roundId:a.roundId,version:a.version,hash};
     if (this.mode === 'testnet') {
@@ -128,6 +142,18 @@ export class Operative {
       .run(merged,JSON.stringify(signers),hash,b.envelope);
     expect(update.changes,'Otro firmante actualizó el sobre; reintentar');
 
+  }
+  cancel(hash) {
+    const {agreement} = this.current(hash);
+    this.store.cancelVersion(agreement.roundId,agreement.version,hash);
+  }
+  async verify(hash) {
+    const {agreement} = this.current(hash);
+    const attempt = this.store.findSettlementForVersion(agreement.roundId,agreement.version);
+    expect(attempt,'Aún no existe un intento enviado');
+    if (!['FAILED','SETTLED'].includes(attempt.state)) return this.coordinator.reconcile(attempt.transactionHash);
+    const receipt = await this.transport.lookup(attempt.transactionHash).catch(()=>null);
+    expect(receipt && await this.evidence.observe(attempt.transactionHash,receipt),'Consulta inconclusa; se conserva el resultado anterior');
   }
   async settle(hash,action) {
     const v = this.current(hash), a = v.agreement;
@@ -164,6 +190,6 @@ export class Operative {
     const attempt = this.store.findSettlementForVersion(a.roundId,a.version);
     return {agreement:a,hash:v.hash,status:v.status,votes,required,signers:b ? JSON.parse(b.signers) : [],
       transactionHash:p?.transactionHash,maxTime:p?.maxTime,
-      unsignedXdr:participant && required.includes(actor.id) ? p?.unsignedXdr : undefined,attempt};
+      evidence:this.evidence.report(v),unsignedXdr:v.status === 'APPROVED' && participant && required.includes(actor.id) ? p?.unsignedXdr : undefined,attempt};
   }
 }

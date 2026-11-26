@@ -225,6 +225,17 @@ export class AgreementStore {
     });
   }
 
+  cancelVersion(roundId: string, version: number, hash: string): void {
+    this.transaction(() => {
+      const current = this.requireCurrent(roundId, version);
+      if (!current || current.row.hash !== hash || this.findSettlementForVersion(roundId, version)
+        || !isLive(this.refreshStatus(current.row, current.agreement, this.clock()))) {
+        throw new AgreementError("INVALID_STATE", "La versión ya no admite cancelación");
+      }
+      this.updateStatus(roundId, version, "CANCELLED");
+    });
+  }
+
   freezeVersion(roundId: string, expectedVersion: number | null, draft: AgreementDraft, openNewRound = false): AgreementView {
     const netting = calculateNetting(draft);
     if (!draft.participants.includes(draft.transactionSourceId)
@@ -446,6 +457,7 @@ export class AgreementStore {
 
       const consents = this.readConsents(roundId, version);
       const existing = consents.find((consent) => consent.participantId === participantId);
+      if (status === "CANCELLED") return invalid;
       if (existing?.decision === decision) return this.view(agreement, row.hash, status, consents);
       if (existing || status !== "PENDING_CONSENT") return invalid;
 

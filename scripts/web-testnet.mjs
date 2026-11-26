@@ -2,6 +2,8 @@
 import { Horizon, Networks, NotFoundError } from '@stellar/stellar-sdk';
 import { lookupTransactionByHash } from '../dist/horizon-settlement.js';
 
+import { nativeBalance } from './testnet-evidence.mjs';
+
 export function testnetTransport(createServer = () => new Horizon.Server('https://horizon-testnet.stellar.org')) {
   let server;
   const client = () => server ??= createServer();
@@ -13,6 +15,10 @@ export function testnetTransport(createServer = () => new Horizon.Server('https:
       } catch {
         throw Error('Horizon testnet: no se pudo leer la cuenta fuente o la comisión.');
       }
+    },
+    async balance(address) {
+      const account = await client().loadAccount(address);
+      return nativeBalance(account).toString();
     },
     submit(transaction) {
       if (transaction.networkPassphrase !== Networks.TESTNET) throw Error('Red incorrecta');

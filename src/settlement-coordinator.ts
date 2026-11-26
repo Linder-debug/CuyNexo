@@ -9,6 +9,7 @@ export interface SettlementReceipt {
   operation_count: number;
   ledger_attr: number;
   fee_charged: string | number;
+  fee_account?: string;
 }
 
 export interface SettlementTransport {
@@ -80,7 +81,7 @@ export class SettlementCoordinator {
   }
 }
 
-function verifyReceipt(attempt: SettlementAttempt, receipt: SettlementReceipt): SettlementOutcome {
+export function verifyReceipt(attempt: SettlementAttempt, receipt: SettlementReceipt): SettlementOutcome {
   const mismatch = { state: "RECONCILING", detail: "LEDGER_MISMATCH" } as const;
   if (!receipt || receipt.hash !== attempt.transactionHash || typeof receipt.successful !== "boolean"
     || receipt.operation_count !== attempt.operationCount
@@ -94,6 +95,7 @@ function verifyReceipt(attempt: SettlementAttempt, receipt: SettlementReceipt): 
     return mismatch;
   }
   if (!(transaction instanceof Transaction) || transaction.hash().toString("hex") !== attempt.transactionHash
+    || (receipt.fee_account !== undefined && receipt.fee_account !== transaction.source)
     || transaction.operations.length !== attempt.operationCount || BigInt(fee) > BigInt(transaction.fee)) {
     return mismatch;
   }
