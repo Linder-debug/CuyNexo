@@ -1,0 +1,22 @@
+# Adenda aprobada · Recorrido web operativo del P0
+
+Linder aprueba completar el recorrido de CuyNexo desde las pantallas **Obligaciones, Acuerdo, Autorizaciones y Resultado**. La implementación reutilizará TypeScript, SQLite, el motor de neteo, el adaptador Stellar clásico y el coordinador por hash. Se conservan el alcance completo del plan v0.3, las pruebas A/B, la comparación con transferencias independientes y las puertas de revisión.
+
+| Pantalla | Acción y resultado esperado |
+|---|---|
+| Obligaciones | El coordinador carga obligaciones sintéticas de 3 a 8 participantes, valida identidades e importes y calcula el acuerdo. El fixture de cuatro empresas sigue disponible como ejemplo ejecutable. Sus cinco obligaciones suman 320 unidades brutas y producen tres pagos por 60 unidades. Una carga inválida identifica el dato que debe corregirse y conserva el último estado válido. |
+| Acuerdo | El coordinador registra la correspondencia entre empresas y direcciones públicas de prueba y congela la versión. Cada empresa comprueba su dirección, su saldo, los pagos, el hash y los vencimientos. Desde su propia sesión puede aceptar o rechazar esa versión con la wallet. El rechazo firmado bloquea la versión. Cancelar el diálogo deja la decisión pendiente. La unanimidad habilita la preparación del pago o, si el residual es cero, termina la ronda en NET_ZERO. |
+| Autorizaciones | La pantalla distingue los consentimientos de todas las empresas de las firmas de pago exigidas por el cuerpo congelado. El conjunto de firmantes se deriva de la fuente global y de las fuentes de las operaciones. En el fixture, A es la fuente global, paga la comisión y origina A→C 20 y A→D 30 XLM. B es fuente explícita de B→D 10 XLM. Las firmas de pago de este caso proceden exclusivamente de las wallets de A y B. |
+| Resultado | El coordinador envía el sobre autorizado y reconcilia por su hash. Participantes y coordinador pueden consultar el estado. Con evidencia insuficiente o discordante, la pantalla mantiene RECONCILING. La confirmación identifica el intento, el resultado verificado y el efecto para cada empresa. La interfaz distingue el intento actual, la evidencia testnet archivada y las simulaciones. |
+
+**Facultades del coordinador.** El coordinador calcula, congela, prepara el cuerpo, reúne los parciales verificados, envía y reconcilia. No firma pagos, no sustituye a los pagadores ni emite decisiones por las empresas. Con solo la firma de A, C ve «Por recibir: 20 XLM. Falta la firma de B». Durante un envío incierto ve «Verificando en Stellar. El resultado aún no se conoce». Ante éxito confirmado ve «Recibido: 20 XLM» y el hash. Ante fallo atómico confirmado ve «Recibido: 0 XLM». El abono parcial de 20 a C cuando falla B pertenece a la comparación B05 de transferencias independientes simuladas.
+
+**Wallet, identidad y custodia.** Se incorpora Varial Wallet 5.53.1 para conexión, prueba de control de cuenta, consentimiento SEP-53 y firma de transacción. Cada empresa tendrá una dirección de prueba distinta. El desafío de sesión será de un solo uso y quedará vinculado a su propósito, origen, ronda y vencimiento. La sesión habilitará únicamente las acciones correspondientes a la empresa verificada. Las claves privadas permanecerán en las wallets. Se mantienen fuera de esta ampliación la custodia, la recuperación de cuentas, el alta de empresas reales y el soporte de múltiples wallets.
+
+**Alojamiento.** Se recomienda servir la primera integración y la demo en loopback por su reproducibilidad y menor exposición. La decisión de alojamiento permanece abierta a Linder, incluida una futura exposición pública con revisión previa de los controles de acceso y despliegue. Stellar testnet sigue siendo la red de liquidación prevista.
+
+**Estado de la evidencia.** T01–T06 documentan el motor, los controles locales, la liquidación y recuperación ya ensayadas, la vista de consulta y los expedientes anteriores. El operador técnico ejecutó y reportó una prueba aislada satisfactoria de dos capacidades de firma de Varial 5.53.1. La aprobación de esta adenda fija el diseño del recorrido operativo. Su implementación y su verificación integrada quedan pendientes.
+
+**Texto de referencia para añadir al final de §2.3 y de §2.4:**
+
+> Para el recorrido web operativo, aplicar también la adenda aprobada al final de §2.1 y los requisitos R01–R06 de spec.md, incluidos los firmantes derivados de cada cuerpo, las tres ventanas temporales, la persistencia de parciales y la recuperación del mismo intento.
