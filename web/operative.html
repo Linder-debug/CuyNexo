@@ -1,0 +1,13 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CuyNexo · Ronda operativa</title><link rel="stylesheet" href="/style.css">
+<header><h1>CuyNexo</h1><strong>Simulación local · pagos sin conexión a la red</strong></header>
+<main><section><h2>Sesión</h2><label>Código de coordinador <input id="code" type="password"></label><button id="admin">Entrar como coordinador</button>
+<label>Empresa asignada <input id="company" placeholder="A"></label><button id="login">Identificarse con Varial</button><button id="logout">Salir</button><p id="identity"></p></section>
+<nav><a href="#ob">Obligaciones</a><a href="#ac">Acuerdo</a><a href="#au">Autorizaciones</a><a href="#re">Resultado</a></nav>
+<section id="ob"><h2>Obligaciones</h2><div id="editor" hidden><button id="fixture">Cargar ejemplo de cuatro empresas</button><label>Participantes y obligaciones · JSON en unidades mínimas (10 000 000 por XLM)<textarea id="input" rows="9"></textarea></label>
+<button id="calculate">Calcular acuerdo</button><label>Empresa → dirección pública · JSON<textarea id="accounts" rows="4"></textarea></label>
+<label>Fuente global <input id="source" value="A"></label><label>Minutos para consentir <input id="minutes" type="number" value="15" min="1"></label>
+<button id="freeze">Congelar versión</button></div><pre id="summary"></pre></section>
+<section id="ac"><h2>Acuerdo</h2><pre id="agreement"></pre><button id="accept">Aceptar esta versión</button><button id="reject">Rechazar esta versión</button></section>
+<section id="au"><h2>Autorizaciones</h2><pre id="auth"></pre><button id="prepare">Preparar cuerpo</button><button id="partial">Revisar y firmar pagos</button><button id="submit">Enviar al simulador</button></section>
+<section id="re"><h2>Resultado</h2><pre id="result"></pre><button id="refresh">Actualizar vista</button><button id="lookup">Consultar estado por hash</button><button id="retry">Retransmitir el mismo sobre</button><p><a href="/archivo.json">Evidencia archivada B01 · testnet</a> · <a href="/b05.json">Comparación B05 · transferencias independientes simuladas</a></p></section>
+<p role="status" id="notice"></p></main><script src="/wallet.js"></script><script src="/ui.js"></script></html>

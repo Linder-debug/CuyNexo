@@ -16,13 +16,15 @@
     "testnet:b04": "npm run build && node scripts/stellar-b04.mjs",
     "testnet:b03": "npm run build && node scripts/stellar-b03.mjs",
     "demo:web": "npm run build && node scripts/t05-web.mjs",
-    "demo:b05": "npm run --silent build && node scripts/b05.mjs"
+    "demo:b05": "npm run --silent build && node scripts/b05.mjs",
+    "p0:web": "npm run build && node scripts/operative-web.mjs"
   },
   "devDependencies": {
     "@types/node": "22.15.30",
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "16.4.1"
+    "@stellar/stellar-sdk": "16.4.1",
+    "@stellar/varial-sdk": "7.0.0"
   }
 }
