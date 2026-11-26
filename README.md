@@ -71,7 +71,7 @@ npm --offline run --silent demo:b05
 npm --offline run demo:web
 ```
 
-- Toda la suite pasó **54 de 54** en T06. El neteo imprime unidades mínimas y en el caso base devuelve `3200000000` brutas y `600000000` residuales.
+- La corrida histórica de T06 pasó **54 de 54**. La base web pasó 66 de 66 y la rama con el transporte opcional a testnet pasó **69 de 69** en la verificación local del 26 de noviembre de 2026. Ninguna de estas cifras es una ejecución en testnet. El neteo imprime unidades mínimas y en el caso base devuelve `3200000000` brutas y `600000000` residuales.
 - B05 imprime JSON comparable con [B05.json](doc/evidencia-t05/B05.json). Los datos de testnet se leen del archivo local y las transferencias independientes se simulan.
 - Abre [http://127.0.0.1:4173](http://127.0.0.1:4173). Desde Resultado, alterna [B04 verificando](http://127.0.0.1:4173/?caso=b04-pendiente&empresa=C#resultado) y [B04 recuperado](http://127.0.0.1:4173/?caso=b04-recuperado&empresa=C#resultado) para seguir el mismo hash. Si el puerto está ocupado, inicia con `npm --offline run demo:web -- --port 4174`. Usa Ctrl+C para detenerlo.
 
@@ -84,6 +84,7 @@ CuyNexo usa transacciones de Stellar clásico a través de Horizon. La integraci
 | B01 | 5922890 | Éxito. Tres pagos aplicados. | [Transacción en Stellar Expert](https://stellar.expert/explorer/testnet/tx/6052425d894e9d0f5b8708b4982594ee2daeb378b76967796d33a5eae914a803) · [Evidencia JSON](doc/evidencia-t04/B01.json) |
 | B02 | 5922896 | Fallo en la última operación. Cero pagos aplicados. La cuenta A pagó la comisión. | [Transacción en Stellar Expert](https://stellar.expert/explorer/testnet/tx/a17b79d73a4ad0420ba1b3d9963cca4f88f510356b85a57b065a586ecb2b0886) · [Evidencia JSON](doc/evidencia-t04/B02.json) |
 | B04 | 5922902 | Recuperación tras descartar la respuesta del cliente. Un envío y verificación por el mismo hash. | [Transacción en Stellar Expert](https://stellar.expert/explorer/testnet/tx/f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8) · [Evidencia JSON](doc/evidencia-t04/B04.json) |
+| W01 | 5938099 | Recorrido web con Varial 5.53.1 real: cuatro consentimientos, dos firmas y tres pagos aplicados en una transacción. | [Transacción en Horizon testnet](https://horizon-testnet.stellar.org/transactions/6ab275cabda0b3d9c5154dfba56d3c485c03f75b115548d3582dfc12343e9c6e) · [Evidencia](doc/evidencia-web-wallet/README.md) |
 
 | Caso | Cuenta del escenario | Dirección pública en Stellar testnet |
 |---|---|---|
@@ -99,8 +100,14 @@ CuyNexo usa transacciones de Stellar clásico a través de Horizon. La integraci
 | B04 | B | `GC2UERISR34SE44UYQ7JCO74L7UBFFXMSD3HVKVXQCC754KFGX7ILN6L` |
 | B04 | C | `GDO3CWTWQ5CMDLKVWNVJDJNGMLUVCIITKVJIKTATWAEV5OBU7YZQ6LJR` |
 | B04 | D | `GC5KHBGPPDOW2NUFMTQL4SSOIFZGJ7DGFT4VXFDGUBRTV6PC6XGZDBXF` |
+| W01 | A | `GARTIYLYIFRSSYINPGIXOBOHOCER6UQJJFO6WDDWBX4SND2D4YJQJSMD` |
+| W01 | B | `GD76BYW527K76HLJRLKIH53GPOYHBOWUNAJZAZRJPKCGT2O4M2Z73YME` |
+| W01 | C | `GCJAE2T6O6ONVBB7UN3HMU572MQV7N5DBRFYTO5G43SPXQIOY5CC42QL` |
+| W01 | D | `GC2NR6TZT4CJB6GKF2W422Q4VDLB5SYM7NGGSXHPDEF63YQNENHACSMH` |
 
 B03 documenta un rechazo por firma faltante y otro por vencimiento. No se observó inclusión durante el sondeo posterior. En B04, la pérdida de la respuesta se indujo del lado cliente tras un envío real en testnet. La vista histórica lee el resultado archivado y B05 simula las transferencias independientes. [Registro de ejecuciones](doc/evidencia-t04/registro-ejecuciones.md) · [Revisión B03](doc/evidencia-b03/README.md).
+
+W01 se ejecutó el 26 de noviembre de 2026 con el mismo módulo de la aplicación en modo testnet, desde un guion de prueba, y no con el comando `npm run p0:web`. La consulta final se hizo leyendo Horizon. No se probó con wallet real la recuperación tras una respuesta perdida ni el rechazo de C, y es una sola ronda con datos sintéticos. Ver [límites](doc/evidencia-web-wallet/README.md).
 
 ## Expediente de entrega
 
