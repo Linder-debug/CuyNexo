@@ -24,6 +24,9 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@fontsource/archivo": "5.3.0",
+    "@fontsource/pt-sans": "5.3.0",
+    "@fontsource/source-code-pro": "5.3.1",
     "@stellar/stellar-sdk": "16.4.1",
     "@stellar/varial-sdk": "7.0.0"
   }
