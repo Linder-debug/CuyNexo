@@ -1,6 +1,8 @@
-# Recorrido web con Varial real y envío en Stellar testnet
+# Recorridos web con Varial real y envío en Stellar testnet
 
-Fecha: 26 de noviembre de 2026, 12:27–12:29 (hora de Lima). Rama `dev/varial-horizon-testnet`, commit `9d0968ac2c1e355b68cfbe34536348c978f9fe59`, 69 de 69 pruebas locales. Estado: **borrador privado**, no incorporado al repositorio.
+W01 (26 nov) es un registro histórico de la interfaz anterior. W02 (27 nov) está al final y corresponde a la interfaz actual.
+
+Fecha: 26 de noviembre de 2026, 12:27–12:29 (hora de Lima). Rama `dev/varial-horizon-testnet`, commit `9d0968ac2c1e355b68cfbe34536348c978f9fe59`, 69 de 69 pruebas locales. Estado: registro histórico de la ejecución del 26 de noviembre con la interfaz anterior, incorporado a la rama `dev/varial-horizon-testnet`. La ejecución con la interfaz actual está en W02, al final.
 
 ## Qué se probó
 
@@ -41,7 +43,40 @@ Tiempo medido en este caso: envío a las 12:28:53, transacción creada en el led
 
 - Estas capturas son un recorrido registrado de una ejecución, no una grabación continua ni una demostración nueva.
 - La consulta final de la transacción la hizo el operador leyendo Horizon. El botón «Consultar estado por hash» de la app no se usó contra testnet en este ensayo.
-- No se probó contra testnet real, con wallet real, la recuperación tras respuesta perdida ni el rechazo de C. Siguen cubiertos por B03/B04 (archivados) y por pruebas simuladas.
+- No se probó contra testnet real, con wallet real, la recuperación tras respuesta perdida ni el rechazo de una empresa. Cobertura existente, sin equipararla a una prueba con wallet real: la recuperación tras respuesta perdida tiene el archivo B04 (testnet, cuentas efímeras y script, sin la web ni la extensión) y pruebas automáticas; el rechazo del ledger ante firma faltante o sobre vencido tiene los registros B03 (hashes `4981416e...` y `c4d88872...`, script); el rechazo de una empresa solo tiene pruebas automáticas y el recorrido Chromium con firmantes efímeros.
 - Una ronda, cuatro cuentas, datos sintéticos. No acredita demanda ni comprensión por personas.
 - Las cuentas y la transacción son públicas en Testnet y desaparecen cuando la red se reinicia.
 - Las capturas se revisaron: sin frases de recuperación, claves, contraseñas ni el código de coordinador.
+
+## W02: recorrido con la interfaz actual (27 de noviembre de 2026)
+
+Rama `dev/varial-horizon-testnet`, commit `52728d2`, 71 de 71 pruebas locales. Extensión Varial Wallet 5.53.1 del release oficial (`build-5.53.1.zip`, SHA-256 `fd6567de460e438989f5ea780cba8a37317347a47cacb930727015d797cef68f`), cargada en cuatro perfiles de Chrome 157 desechables, uno por empresa, más una sesión de coordinador sin wallet. La web corrió con `application(...)` de `scripts/operative-web.mjs` en modo `testnet`, rótulo «Stellar TESTNET · activos de prueba». Cada empresa conectó su cuenta (ventana «Connection Request», Test Net), se identificó con una firma de mensaje (`cuynexo-session-v1`) y aceptó con otra (`codember-consent-v1`). A y B firmaron la transacción en la ventana «Confirm Transaction» de la extensión (comisión 0.00003 XLM, memo igual al hash del acuerdo). El coordinador envió una sola vez y C pulsó «Verificar resultado».
+
+| Paso | Resultado |
+|---|---|
+| Conexiones | 4 de 4 |
+| Firmas de mensaje (identificación y aceptación) | 8 de 8 |
+| Firmas de transacción | 2 de 2 (A y B) |
+| Envío por el coordinador | una vez; «Resultado confirmado» |
+| «Verificar resultado» desde C | «Pagado 0, recibido 20 XLM», comisión total 0.00003 XLM |
+
+Hash `83667c2f095812522f00876bb0f752f15ee2164dbefaa847dd9e54e2b2a29fee`. Leído en Horizon: https://horizon-testnet.stellar.org/transactions/83667c2f095812522f00876bb0f752f15ee2164dbefaa847dd9e54e2b2a29fee . `successful: true`, ledger 5958983, creada 2026-11-27T22:29:19Z, 2 firmas, memo de tipo hash, `fee_charged` 300 stroops, 3 pagos nativos: A→C 20, A→D 30, B→D 10 XLM.
+
+| Empresa | Dirección pública |
+|---|---|
+| A | `GBF5QMC24TNA6A4BQL3JVLJFYBVXJG2A6DR2R6534THSQBXL3GJ73O7K` |
+| B | `GBKWO4R7XZN7NUCAVTOGLKN4H7335VYNSCC3CHE7UBKJYN233INTTJAB` |
+| C | `GAJKVCFDNKBHNMAKMCM6XPNWAPMG7TBTWFIKQFS6BUHPAF2FCLPDVDFX` |
+| D | `GAXXIV3CHBDVJGJDFSIIT2PAD6CLU4LPWNMDFGFPB2FIZGBMAZMC4IL3` |
+
+Activación con Friendbot, una llamada por cuenta: A `100550ffcb42dbbb0539e13b04b1199f6b6ceecf767a3b2dd638f244513e00e4`, B `a3ecb86abcd1f86fab268ca66f35c8ad79f9fa142f3b6bcba356cb22ef7b2390`, C `bec3517f82a16a6cf06db540986e013e5a52cff4aa109a72aec9b2904a22e740`, D `aec5bbfc94cfe1712107d2615f21739787ab865730f913e078ca06f00ed45b9d`.
+
+Capturas saneadas en `w02/`: conexión, firma de mensaje de identificación, firma de mensaje de aceptación, firma de transacción de A y de B, coordinador antes de enviar, resultado del coordinador y resultado verificado por C.
+
+Condiciones para reproducir: la extensión necesita un Chrome con pantalla (por ejemplo bajo Xvfb) y carga mediante `enableExtensions` de Puppeteer. Al aceptar la versión la página abre un cuadro de confirmación del navegador que el guion debe aceptar. Las cuentas se activan con Friendbot después de los cuatro consentimientos y antes de preparar el cuerpo. El plazo de decisión del ejemplo es corto (unos 15 minutos).
+
+Límites de W02:
+- Solo el camino exitoso, en escritorio (1440 px), con una sola ronda y datos sintéticos. No se probaron con la extensión real el rechazo, la pérdida de respuesta, la recuperación ni «Consultar estado» contra testnet.
+- La vista de C ya mostraba el resultado confirmado antes de pulsar «Verificar resultado» (se actualiza al abrir Resultado), de modo que la confirmación no se atribuye solo al botón.
+- En modo testnet la franja superior sigue con el texto «Prototipo de diseño · No constituye evidencia de ejecución», y el plazo no usa el formato de hora de Lima en 24 horas sin segundos. Son dos ajustes menores pendientes.
+- Las cuentas y la transacción son públicas en Testnet y desaparecen cuando la red se reinicia. Las capturas no contienen frases de recuperación, claves ni contraseñas. Las ventanas de firma de mensaje muestran un desafío de sesión ya consumido.
