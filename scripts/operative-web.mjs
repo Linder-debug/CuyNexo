@@ -9,11 +9,11 @@ import { verifySep53 } from '../dist/consents.js';
 
 const token = () => randomBytes(32).toString('hex');
 const files = new Map(Object.entries({
-  '/':'web/operative.html','/ui.js':'web/ui.js','/style.css':'web/style.css',
+  '/archivo.woff2':'node_modules/@fontsource/archivo/files/archivo-latin-700-normal.woff2','/pt-sans.woff2':'node_modules/@fontsource/pt-sans/files/pt-sans-latin-400-normal.woff2','/source-code-pro.woff2':'node_modules/@fontsource/source-code-pro/files/source-code-pro-latin-400-normal.woff2','/logo.png':'assets/logo/4-cuynexo-logo.png','/archivo-w01':'doc/evidencia-web-wallet/README.md','/':'web/operative.html','/ui.js':'web/ui.js','/style.css':'web/style.css',
   '/archivo.json':'doc/evidencia-t04/B01.json','/b05.json':'doc/evidencia-t05/B05.json',
   '/wallet.js':'node_modules/@stellar/varial-sdk/build/index.min.js','/fixture.json':'fixtures/cuatro-empresas.json'
 }));
-export function application(path, clock = Date.now, mode = 'success', createServer) {
+export function application(path, clock = Date.now, mode = 'success', createServer, onNextCode) {
   const service = new Operative(path,clock,mode,createServer), sessions = new Map(), challenges = new Map();
   let code = token();
   const initialCode = code;
@@ -31,9 +31,9 @@ export function application(path, clock = Date.now, mode = 'success', createServ
       expect(req.headers.host === new URL(origin).host,'Origen inválido');
       res.setHeader('Cache-Control','no-store');
       res.setHeader('X-Content-Type-Options','nosniff');
-      res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
+      res.setHeader('Content-Security-Policy',"default-src 'none'; img-src 'self'; font-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
       if (req.method === 'GET' && files.has(req.url)) {
-        res.setHeader('Content-Type',({'/':'text/html; charset=utf-8','/style.css':'text/css','/fixture.json':'application/json','/archivo.json':'application/json','/b05.json':'application/json'})[req.url] ?? 'text/javascript');
+        res.setHeader('Content-Type',({'/archivo.woff2':'font/woff2','/archivo-w01':'text/plain; charset=utf-8','/pt-sans.woff2':'font/woff2','/source-code-pro.woff2':'font/woff2','/logo.png':'image/png','/':'text/html; charset=utf-8','/style.css':'text/css','/fixture.json':'application/json','/archivo.json':'application/json','/b05.json':'application/json'})[req.url] ?? 'text/javascript');
         const bytes = await readFile(new URL('../'+files.get(req.url),import.meta.url));
         if (req.url === '/' && mode === 'testnet') {
           return res.end(bytes.toString().replace('Simulación local · pagos sin conexión a la red','Stellar TESTNET · activos de prueba')
@@ -49,7 +49,7 @@ export function application(path, clock = Date.now, mode = 'success', createServ
       if (action === 'admin') {
         expect(code && typeof b.code === 'string' && b.code.length === code.length &&
           /^[0-9a-f]+$/.test(b.code) && timingSafeEqual(Buffer.from(code),Buffer.from(b.code)),'Código inválido');
-        code = null; login({kind:'coordinator'}); return json({});
+        code = onNextCode ? token() : null; if(code) onNextCode(code); login({kind:'coordinator'}); return json({});
       }
       if (action === 'challenge') {
         const v = service.latest();
@@ -102,6 +102,6 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   expect(transport === 'testnet' || mode !== 'testnet','Selecciona testnet mediante CUYNEXO_TRANSPORT');
   expect(process.stdout.isTTY, 'Inicia desde una terminal privada sin redirigir la salida');
   const path = process.env.CUYNEXO_DB ?? (transport === 'testnet' ? 'cuynexo-testnet.sqlite' : 'cuynexo-web.sqlite');
-  const app = application(path,Date.now,mode);
+  const app = application(path,Date.now,mode,undefined,next=>console.log('Código de reingreso (uso único): '+next));
   app.server.listen(8765,'127.0.0.1',()=>console.log(transport+' · http://127.0.0.1:8765/\nCódigo de coordinador (uso único): '+app.code));
 }
