@@ -13,7 +13,7 @@ Abrir http://127.0.0.1:8765 en el perfil del coordinador. Usar el código de un 
 CUYNEXO_DB selecciona el archivo SQLite. Reiniciar con el mismo archivo conserva la ronda, parciales e intento y requiere identificarse de nuevo. CUYNEXO_SIM admite success (predeterminado), failure, before-send y lost-response. Para ejercicios separados, usar diarios distintos. En before-send consultar y luego retransmitir desde el coordinador; en lost-response basta consultar. El simulador registra recibos por hash y llamadas de transporte por separado. El resultado describe el ejercicio sintético y no acredita balances de una red.
 
 ## Verificación
-Suite Node: 66/66, incluidas 54 pruebas anteriores y 12 nuevas en test/operative.test.mjs. La corrida adicional de Chromium utilizó cinco contextos, claves efímeras y un proveedor de wallet de prueba. Desde las cuatro pantallas se verificaron cuatro consentimientos, dos firmas, respuesta perdida y recuperación por C de 20 XLM.
+Suite Node: 71/71 en la rama dev/varial-horizon-testnet (66 de la base web más las pruebas de la interfaz y de Varial/testnet). La corrida adicional de Chromium utilizó cinco contextos, claves efímeras y un proveedor de wallet de prueba. Desde las cuatro pantallas se verificaron cuatro consentimientos, dos firmas, respuesta perdida y recuperación por C de 20 XLM.
 
 | Incremento | Criterios cubiertos | Límite |
 |---|---|---|
