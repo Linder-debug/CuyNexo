@@ -1,0 +1,96 @@
+{
+  "scenario": "B04",
+  "mode": "offline",
+  "status": "simulated-pass",
+  "hash": "8af8db457546bba56018235d62d5d4ffd22505890a8bdc2fe99f12a2d0163c4f",
+  "addresses": {
+    "A": "GAWAKIKGWPNY54D5GSEGFUWM54GO6RIF3UVIBEB2RPIH37L5WUOMLWZZ",
+    "B": "GBD474THDNUOCQGD4ZTWI7TLPX654OKS7AOL373OHE767XS23HANJ5MU",
+    "C": "GCZ63A4IWIAXYNYYVV2TOOJNAXCBPXHLDYRJF7DWTOM575IR56DUEG4R",
+    "D": "GBGPSFSH5SFOUVL72K2WCEIDHTVLLLEUMPTU3HCA3S2LBI6TKCT5XZVH"
+  },
+  "before": {
+    "A": {
+      "balanceAtomic": "1000000000",
+      "sequence": "420"
+    },
+    "B": {
+      "balanceAtomic": "1000000000",
+      "sequence": "420"
+    },
+    "C": {
+      "balanceAtomic": "1000000000",
+      "sequence": "420"
+    },
+    "D": {
+      "balanceAtomic": "1000000000",
+      "sequence": "420"
+    }
+  },
+  "submission": {
+    "processId": 29,
+    "requests": 2,
+    "submitCalls": 1,
+    "responseDiscarded": true,
+    "statuses": [
+      "RECONCILING",
+      "RECONCILING"
+    ]
+  },
+  "recovery": {
+    "processId": 37,
+    "hash": "8af8db457546bba56018235d62d5d4ffd22505890a8bdc2fe99f12a2d0163c4f",
+    "previousState": "RECONCILING",
+    "submitCalls": 0,
+    "state": "SETTLED",
+    "detail": null
+  },
+  "after": {
+    "A": {
+      "balanceAtomic": "499999700",
+      "sequence": "421"
+    },
+    "B": {
+      "balanceAtomic": "900000000",
+      "sequence": "420"
+    },
+    "C": {
+      "balanceAtomic": "1200000000",
+      "sequence": "420"
+    },
+    "D": {
+      "balanceAtomic": "1400000000",
+      "sequence": "420"
+    }
+  },
+  "operations": [
+    {
+      "from": "A",
+      "to": "C",
+      "xlm": "20.0000000"
+    },
+    {
+      "from": "A",
+      "to": "D",
+      "xlm": "30.0000000"
+    },
+    {
+      "from": "B",
+      "to": "D",
+      "xlm": "10.0000000"
+    }
+  ],
+  "sourceHashes": [
+    "8af8db457546bba56018235d62d5d4ffd22505890a8bdc2fe99f12a2d0163c4f"
+  ],
+  "paymentDeltasAtomic": {
+    "A": "-500000000",
+    "B": "-100000000",
+    "C": "200000000",
+    "D": "400000000"
+  },
+  "successful": true,
+  "ledger": 1,
+  "feeAtomic": "300",
+  "explorerUrl": null
+}

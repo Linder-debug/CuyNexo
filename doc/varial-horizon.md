@@ -1,0 +1,32 @@
+# Prueba por rol e integración con Horizon testnet
+
+## Preparación común
+
+En una copia de la rama, instalar las dependencias fijadas (`npm ci`) antes del ensayo. Con dependencias presentes, `npm --offline test` compila y verifica localmente. El servidor y los clientes de prueba HTTP solo usan loopback en las pruebas. Los dobles de Horizon proporcionan los datos de cuenta, tarifa, envío y consulta. La UI sirve el SDK de Varial 7.0.0 localmente.
+
+1. Usar cuatro perfiles desechables de navegador, separados de cualquier perfil personal o PUCP. En cada uno instalar Varial Wallet 5.53.1 del release oficial, crear una cuenta de laboratorio independiente y seleccionar Testnet. Preparar un quinto perfil para el coordinador, sin wallet. Desactivar grabación, sincronización y trazas de red en la preparación. Copiar únicamente las direcciones públicas G… . Las semillas permanecen en cada perfil.
+2. Para verificar la wallet real con pagos simulados, lanzar desde una terminal privada sin grabar ni redirigir: `npm run p0:web`. Abrir http://127.0.0.1:8765 en los cinco perfiles. Verificar «Simulación local». Registrar el código de un solo uso únicamente en el formulario del coordinador. El código no pertenece al informe ni a capturas. Usar cuentas sin fondos para este ensayo.
+3. El coordinador carga el ejemplo, calcula 320→60, asigna A–D a sus direcciones públicas y congela. Cada empresa se identifica con su propia wallet y aprueba el desafío de sesión. Comprobar en pantalla dirección, versión, saldo y vencimiento. En una ronda de rechazo, cancelar primero el diálogo: debe seguir pendiente. Después rechazar como C y verificar que A y B no pueden avanzar. Congelar una nueva versión para la prueba de éxito.
+4. Los cuatro participantes aceptan la versión vigente. El coordinador prepara el cuerpo. A y B comprueban fuente global A, sus cuentas fuente y los tres pagos (A→C 20, A→D 30, B→D 10 XLM). Firman por separado. Tras firmar A, C comprueba que falta B. El coordinador actualiza y envía al simulador. Para ensayar recuperación, arrancar previamente con `CUYNEXO_SIM=lost-response`, usar una base de simulación nueva y reiniciar con la misma ruta: se renuevan sesiones, se consulta el mismo intento, C ve 20 al confirmarse. El escenario before-send permite ensayar la retransmisión del sobre persistido.
+
+## Ensayo en testnet pendiente de autorización y ejecución
+
+Usar cuentas testnet desechables existentes y activas, con XLM de prueba suficiente para las obligaciones, reservas y comisión. El servicio no crea ni financia cuentas. Utilizar las cuentas dedicadas exclusivamente a esta ronda para evitar cambios de secuencia durante las firmas.
+
+1. Detener el simulador. Para el futuro ensayo autorizado, iniciar en una terminal privada con `CUYNEXO_TRANSPORT=testnet npm run p0:web`. La base predeterminada es cuynexo-testnet.sqlite. CUYNEXO_DB admite una ruta privada específica. Los diarios de simulación y testnet tienen marcadores incompatibles. En cada perfil, recargar la página y comprobar el rótulo **Stellar TESTNET** antes de identificarse.
+2. Repetir la carga, congelación y cuatro decisiones. Hasta este punto la app no necesita contactar Horizon. La extensión es un proceso independiente y puede realizar sus propias consultas. **Preparar cuerpo** es la primera lectura externa: obtiene secuencia de A y tarifa base y aplica el tope del acuerdo. Si la lectura falla se conserva la ronda. El cuerpo guardado se reutiliza aunque se recargue la página.
+3. A y B firman el mismo cuerpo antes de maxTime. Solo el coordinador puede pulsar **Enviar a Stellar testnet**. Desde esa acción puede producirse una liquidación en testnet. Si la respuesta es incierta, registrar el hash, conservar el diario y consultar. Reiniciar con el mismo modo y la misma base. **Consultar estado** solo lee. Un fallo de comunicación o un recibo discordante bloquea la retransmisión. Tras una consulta por hash con respuesta de ausencia (404 del SDK), la retransmisión explícita reutiliza el sobre original dentro de su ventana. Un 404 temporal no acredita fallo definitivo. Si vence y continúa incierto, mantener el intento en revisión.
+4. Registrar modo, versiones, rol, ronda, hash de acuerdo, hash del intento, ledger y resultado comprobado. Saneamiento antes de capturar: excluir semillas, contraseñas, cookies, código de sesión del coordinador, firmas en bruto y sobres. No exportar SQLite ni los perfiles. Revisar capturas antes de incorporar evidencia. El remitente permanece en loopback y el único destino de pagos configurado es Horizon testnet.
+
+## Matriz de revisión
+
+| Requisito | Evidencia disponible | Pendiente |
+|---|---|---|
+| R01: carga y neteo | A01–A03 y test/operative.test.mjs: reglas, caso alternativo, 8 empresas y neto cero. | Comprensión de importes por personas. |
+| R02: identidad y acuerdo | Pruebas HTTP de sesión, revocación y rol; aceptación y rechazo, sustitución y segunda verificación SEP-53 tras reinicio. Laboratorio aislado del operador con Varial real A/B. | Cuatro sesiones y decisiones desde esta web con extensión real. |
+| R03: firmas y liquidación | Pruebas de adaptador y parciales persistidos; nueva prueba «Web testnet: inicio pasivo» verifica secuencia, tarifa y cuerpo con Horizon sustituido. B01/B02/B03 son históricos. | Preparación con cuenta activa y envío originado desde esta web con A y B reales de prueba. |
+| R04: recuperación | B04 archivado y pruebas del coordinador. Nueva prueba: respuesta perdida, reinicio, consulta pasiva, bloqueo por indisponibilidad y retransmisión del mismo XDR tras ausencia. | Confirmación de este recorrido web en testnet. |
+| R05: resultado por empresa | Chromium del P0 anterior mostró recuperación de C con proveedor de wallet de prueba. T05 y B05 distinguen comparaciones y resultados. | Capturas saneadas del recorrido con extensión, comprensión humana y medición de fricción. |
+| R06: reproducción y entrega | README con direcciones públicas y expedientes previos; esta guía y suite local. | Revisión independiente, incorporación de capturas anteriores, video, licencia y decisión de entrega. |
+
+La corrida histórica de T06 fue 54/54 y la base web fue 66/66. En esta rama pasan 71/71 pruebas de Node. Ninguna de estas cifras acredita un nuevo envío testnet. El sondeo B03 mantiene su alcance temporal. Los tiempos de confirmación y los costes de transferencias independientes siguen pendientes de medición y modelado, respectivamente.

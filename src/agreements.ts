@@ -1,0 +1,566 @@
+import { createHash } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
+import { StrKey } from "@stellar/stellar-sdk/base";
+import { canonicalJson } from "./canonical-json.js";
+import { verifiesConsent, type SignedConsent } from "./consents.js";
+import { calculateNetting, type NettingInput, type NettingResult } from "./netting.js";
+
+export interface AgreementDraft extends NettingInput {
+  transactionSourceId: string;
+  feeCapAtomic: string;
+  consentBy: number;
+  consentScheme?: "SEP-53";
+  accounts?: Readonly<Record<string, string>>;
+}
+
+export interface FrozenAgreement extends AgreementDraft, NettingResult {
+  roundId: string;
+  version: number;
+  network: "stellar-testnet";
+  asset: "XLM";
+  settleBy: number;
+  specVersion: "0.3";
+}
+
+export type ConsentDecision = "ACCEPT" | "REJECT";
+export interface SyntheticConsent {
+  roundId: string;
+  version: number;
+  agreementHash: string;
+  participantId: string;
+  decision: ConsentDecision;
+}
+
+type VersionStatus =
+  | "PENDING_CONSENT" | "APPROVED" | "NET_ZERO"
+  | "REJECTED" | "SUPERSEDED" | "EXPIRED" | "CANCELLED";
+
+interface VersionRow {
+  payload: string;
+  hash: string;
+  status: VersionStatus;
+}
+
+interface RecordedConsent {
+  participantId: string;
+  decision: ConsentDecision;
+  receivedAt: number;
+  signature?: string;
+  agreementHash?: string;
+}
+
+export interface AgreementView {
+  agreement: FrozenAgreement;
+  hash: string;
+  status: VersionStatus;
+  consents: RecordedConsent[];
+  validApprovalCount: number;
+  canAdvance: boolean;
+}
+
+export interface SettlementReservation {
+  roundId: string;
+  version: number;
+  agreementHash: string;
+  transactionHash: string;
+  envelopeXdr: string;
+  operationCount: number;
+  maxTime: number;
+}
+
+export type SettlementOutcome =
+  | { state: "RECONCILING"; detail: "UNCONFIRMED" | "LEDGER_MISMATCH" }
+  | { state: "SETTLED" | "FAILED"; ledger: number; feeAtomic: string };
+
+export interface SettlementAttempt extends Omit<SettlementReservation, "envelopeXdr"> {
+  createdAt: number;
+  state: "SUBMITTED" | SettlementOutcome["state"];
+  detail: "UNCONFIRMED" | "LEDGER_MISMATCH" | null;
+  ledger: number | null;
+  feeAtomic: string | null;
+}
+
+const ATTEMPT_FIELDS = `
+  round_id AS roundId, version, agreement_hash AS agreementHash, transaction_hash AS transactionHash,
+  operation_count AS operationCount, max_time AS maxTime, created_at AS createdAt,
+  state, detail, ledger, fee_atomic AS feeAtomic
+`;
+
+export class AgreementError extends Error {
+  constructor(
+    public readonly code: "INVALID_INPUT" | "INVALID_CONSENT" | "INVALID_STATE"
+      | "NOT_FOUND" | "VERSION_CONFLICT" | "ROUND_ACTIVE",
+    message: string,
+  ) {
+    super(message);
+    this.name = "AgreementError";
+  }
+}
+
+const SETTLEMENT_WINDOW_MS = 10 * 60 * 1000;
+
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS rounds (
+    id TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    closed_at INTEGER
+  ) STRICT;
+
+  CREATE UNIQUE INDEX IF NOT EXISTS single_open_round ON rounds ((1)) WHERE closed_at IS NULL;
+
+  CREATE TABLE IF NOT EXISTS agreement_versions (
+    round_id TEXT NOT NULL REFERENCES rounds(id),
+    version INTEGER NOT NULL CHECK (version >= 1),
+    payload TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN (
+      'PENDING_CONSENT', 'APPROVED', 'NET_ZERO', 'REJECTED', 'SUPERSEDED', 'EXPIRED', 'CANCELLED'
+    )),
+    PRIMARY KEY (round_id, version),
+    UNIQUE (round_id, version, hash)
+  ) STRICT;
+
+  CREATE TRIGGER IF NOT EXISTS immutable_version
+  BEFORE UPDATE OF round_id, version, payload, hash ON agreement_versions
+  BEGIN
+    SELECT RAISE(ABORT, 'Agreement version is immutable');
+  END;
+
+  CREATE TABLE IF NOT EXISTS synthetic_consents (
+    round_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    agreement_hash TEXT NOT NULL,
+    participant_id TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('ACCEPT', 'REJECT')),
+    received_at INTEGER NOT NULL,
+    PRIMARY KEY (round_id, version, participant_id),
+    FOREIGN KEY (round_id, version, agreement_hash)
+      REFERENCES agreement_versions (round_id, version, hash)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS signed_consent_proofs (
+    round_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    participant_id TEXT NOT NULL,
+    signature TEXT NOT NULL,
+    PRIMARY KEY (round_id, version, participant_id),
+    FOREIGN KEY (round_id, version, participant_id)
+      REFERENCES synthetic_consents (round_id, version, participant_id)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS settlement_attempts (
+    round_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    agreement_hash TEXT NOT NULL,
+    transaction_hash TEXT NOT NULL UNIQUE,
+    envelope_xdr TEXT NOT NULL,
+    operation_count INTEGER NOT NULL CHECK (operation_count > 0),
+    max_time INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('SUBMITTED', 'RECONCILING', 'SETTLED', 'FAILED')),
+    detail TEXT,
+    ledger INTEGER,
+    fee_atomic TEXT,
+    PRIMARY KEY (round_id, version),
+    FOREIGN KEY (round_id, version, agreement_hash)
+      REFERENCES agreement_versions (round_id, version, hash)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS settled_obligations (
+    obligation_id TEXT PRIMARY KEY,
+    transaction_hash TEXT NOT NULL REFERENCES settlement_attempts(transaction_hash)
+  ) STRICT;
+`;
+
+function isLive(status: VersionStatus): boolean {
+  return status === "PENDING_CONSENT" || status === "APPROVED";
+}
+
+export class AgreementStore {
+  private readonly db: DatabaseSync;
+
+  constructor(path: string, private readonly clock: () => number = Date.now, readOnly = false) {
+    this.db = new DatabaseSync(path, { readOnly });
+    try {
+      this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+      if (!readOnly) {
+        this.db.exec("PRAGMA synchronous = FULL;");
+        this.transaction(() => this.db.exec(SCHEMA));
+      }
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
+  }
+
+  close(): void {
+    this.db.close();
+  }
+
+  createRound(roundId: string): void {
+    if (typeof roundId !== "string" || !roundId || /[^!-~]/.test(roundId)) {
+      throw new AgreementError("INVALID_INPUT", "A round ID must be nonempty printable ASCII without spaces");
+    }
+    this.transaction(() => {
+      if (this.db.prepare("SELECT id FROM rounds WHERE id = ?").get(roundId)) {
+        throw new AgreementError("INVALID_INPUT", "Round ID already exists");
+      }
+      if (this.db.prepare("SELECT id FROM rounds WHERE closed_at IS NULL").get()) {
+        throw new AgreementError("ROUND_ACTIVE", "An active round already exists");
+      }
+      this.db.prepare("INSERT INTO rounds (id, created_at) VALUES (?, ?)").run(roundId, this.clock());
+    });
+  }
+
+  closeRound(roundId: string, expectedVersion: number | null): void {
+    this.transaction(() => {
+      const latest = this.requireCurrent(roundId, expectedVersion);
+      this.requireNoPendingSettlement(roundId);
+      const now = this.clock();
+      if (latest) {
+        const status = this.refreshStatus(latest.row, latest.agreement, now);
+        if (isLive(status)) this.updateStatus(roundId, latest.agreement.version, "CANCELLED");
+      }
+      this.db.prepare("UPDATE rounds SET closed_at = ? WHERE id = ?").run(now, roundId);
+    });
+  }
+
+  cancelVersion(roundId: string, version: number, hash: string): void {
+    this.transaction(() => {
+      const current = this.requireCurrent(roundId, version);
+      if (!current || current.row.hash !== hash || this.findSettlementForVersion(roundId, version)
+        || !isLive(this.refreshStatus(current.row, current.agreement, this.clock()))) {
+        throw new AgreementError("INVALID_STATE", "La versión ya no admite cancelación");
+      }
+      this.updateStatus(roundId, version, "CANCELLED");
+    });
+  }
+
+  freezeVersion(roundId: string, expectedVersion: number | null, draft: AgreementDraft, openNewRound = false): AgreementView {
+    const netting = calculateNetting(draft);
+    if (!draft.participants.includes(draft.transactionSourceId)
+      || typeof draft.feeCapAtomic !== "string"
+      || !/^(0|[1-9][0-9]*)$/.test(draft.feeCapAtomic)
+      || draft.feeCapAtomic !== draft.feeCapAtomic.trim()
+      || !Number.isSafeInteger(draft.consentBy)
+      || !Number.isSafeInteger(draft.consentBy + SETTLEMENT_WINDOW_MS)) {
+      throw new AgreementError("INVALID_INPUT", "Invalid transaction source, fee cap or consent deadline");
+    }
+    const accounts = draft.accounts;
+    if (draft.consentScheme !== undefined && (draft.consentScheme !== "SEP-53" || !accounts)) {
+      throw new AgreementError("INVALID_INPUT", "SEP-53 requires registered accounts");
+    }
+    if (accounts !== undefined) {
+      const entries = Object.entries(accounts ?? {});
+      if (entries.length !== draft.participants.length
+        || entries.some(([id, address]) => !draft.participants.includes(id)
+          || typeof address !== "string" || !StrKey.isValidEd25519PublicKey(address))
+        || new Set(entries.map(([, address]) => address)).size !== entries.length) {
+        throw new AgreementError("INVALID_INPUT", "Each participant needs a distinct Ed25519 account");
+      }
+    }
+    return this.transaction(() => {
+      if (openNewRound) {
+        if (expectedVersion !== null || typeof roundId !== "string" || !roundId || /[^!-~]/.test(roundId)) {
+          throw new AgreementError("INVALID_INPUT", "Invalid new round");
+        }
+        const open = this.db.prepare("SELECT id FROM rounds WHERE closed_at IS NULL").get();
+        if (open) {
+          const previous = this.findVersion(String(open.id));
+          if (previous?.status !== "NET_ZERO") throw new AgreementError("ROUND_ACTIVE", "Active round exists");
+          this.db.prepare("UPDATE rounds SET closed_at=? WHERE id=?").run(this.clock(), open.id);
+        }
+        this.db.prepare("INSERT INTO rounds (id, created_at) VALUES (?, ?)").run(roundId, this.clock());
+      }
+      const latest = this.requireCurrent(roundId, expectedVersion);
+      this.requireNoPendingSettlement(roundId);
+      const now = this.clock();
+      if (draft.consentBy <= now) {
+        throw new AgreementError("INVALID_INPUT", "Consent deadline must be in the future");
+      }
+      if (latest) {
+        const status = this.refreshStatus(latest.row, latest.agreement, now);
+        if (status === "NET_ZERO") {
+          throw new AgreementError("INVALID_STATE", "A completed zero-net round must be closed");
+        }
+        if (isLive(status)) this.updateStatus(roundId, latest.agreement.version, "SUPERSEDED");
+      }
+
+      const settled = this.db.prepare("SELECT 1 FROM settled_obligations WHERE obligation_id = ?");
+      if (draft.obligations.some(({ obligationId }) => settled.get(obligationId))) {
+        throw new AgreementError("INVALID_STATE", "An obligation was already settled");
+      }
+
+      const agreement: FrozenAgreement = {
+        roundId,
+        version: (latest?.agreement.version ?? 0) + 1,
+        network: "stellar-testnet",
+        asset: "XLM",
+        participants: [...draft.participants].sort(),
+        obligations: draft.obligations.map(({ obligationId, debtorId, creditorId, amountAtomic }) =>
+          ({ obligationId, debtorId, creditorId, amountAtomic }))
+          .sort((left, right) => left.obligationId < right.obligationId ? -1 : left.obligationId > right.obligationId ? 1 : 0),
+        ...netting,
+        transactionSourceId: draft.transactionSourceId,
+        feeCapAtomic: draft.feeCapAtomic,
+        consentBy: draft.consentBy,
+        settleBy: draft.consentBy + SETTLEMENT_WINDOW_MS,
+        specVersion: "0.3",
+        ...(draft.consentScheme ? { consentScheme: draft.consentScheme } : {}),
+        ...(accounts === undefined ? {} : { accounts: { ...accounts } }),
+      };
+      const payload = canonicalJson(agreement);
+      const hash = createHash("sha256").update(payload, "utf8").digest("hex");
+      this.db.prepare(`
+        INSERT INTO agreement_versions (round_id, version, payload, hash, status)
+        VALUES (?, ?, ?, ?, 'PENDING_CONSENT')
+      `).run(roundId, agreement.version, payload, hash);
+      return this.view(agreement, hash, "PENDING_CONSENT", []);
+    });
+  }
+
+  getVersion(roundId: string, version: number): AgreementView {
+    return this.transaction(() => {
+      const row = this.findVersion(roundId, version);
+      if (!row) throw new AgreementError("NOT_FOUND", "Agreement version not found");
+      const agreement = this.decodeVersion(row);
+      const status = this.refreshStatus(row, agreement, this.clock());
+      return this.view(agreement, row.hash, status, this.readConsents(roundId, version));
+    });
+  }
+
+  inspectVersion(roundId: string, version: number) {
+    return this.transaction(() => {
+      const row = this.findVersion(roundId, version);
+      if (!row) throw new AgreementError("NOT_FOUND", "Agreement version not found");
+      const agreement = this.decodeVersion(row);
+      const status = this.refreshStatus(row, agreement, this.clock(), false);
+      return {
+        view: this.view(agreement, row.hash, status, this.readConsents(roundId, version)),
+        attempt: this.findSettlementForVersion(roundId, version),
+      };
+    }, "BEGIN");
+  }
+
+  recordConsent(input: SyntheticConsent): AgreementView {
+    return this.saveConsent(input);
+  }
+
+  recordSignedConsent(input: SignedConsent): AgreementView {
+    if (typeof input.signature !== "string") {
+      throw new AgreementError("INVALID_CONSENT", "An Ed25519 signature is required");
+    }
+    return this.saveConsent(input, input.signature);
+  }
+
+  requireSignedAgreement(roundId: string, version: number, hash: string): AgreementView {
+    const view = this.getVersion(roundId, version);
+    const { accounts } = view.agreement;
+    if (view.hash !== hash || !view.canAdvance || !accounts
+      || !view.agreement.participants.every((participantId) => {
+        const vote = view.consents.find((item) => item.participantId === participantId);
+        return vote?.decision === "ACCEPT" && typeof vote.signature === "string"
+          && vote.agreementHash === hash
+          && verifiesConsent(accounts[participantId], {
+            roundId, version, agreementHash: hash, participantId, decision: "ACCEPT", signature: vote.signature,
+          }, view.agreement.consentScheme);
+      })) {
+      throw new AgreementError("INVALID_STATE", "Agreement lacks current unanimous Ed25519 consent");
+    }
+    return view;
+  }
+
+  findSettlementForVersion(roundId: string, version: number): SettlementAttempt | undefined {
+    return this.db.prepare(`
+      SELECT ${ATTEMPT_FIELDS} FROM settlement_attempts WHERE round_id = ? AND version = ?
+    `).get(roundId, version) as SettlementAttempt | undefined;
+  }
+
+  getSettlementByHash(hash: string): SettlementAttempt {
+    const attempt = this.db.prepare(`
+      SELECT ${ATTEMPT_FIELDS} FROM settlement_attempts WHERE transaction_hash = ?
+    `).get(hash) as SettlementAttempt | undefined;
+    if (!attempt) throw new AgreementError("NOT_FOUND", "Settlement attempt not found");
+    return attempt;
+  }
+
+  reserveSettlement(input: SettlementReservation): { attempt: SettlementAttempt; reserved: boolean } {
+    return this.transaction(() => {
+      const existing = this.findSettlementForVersion(input.roundId, input.version);
+      if (existing) return { attempt: existing, reserved: false };
+      const latest = this.requireCurrent(input.roundId, input.version);
+      const now = this.clock();
+      if (!latest || latest.row.hash !== input.agreementHash
+        || latest.row.status !== "APPROVED" || now >= latest.agreement.settleBy
+        || now >= input.maxTime * 1000 || latest.agreement.payments.length !== input.operationCount) {
+        throw new AgreementError("INVALID_STATE", "Settlement is no longer eligible for submission");
+      }
+      this.db.prepare(`
+        INSERT INTO settlement_attempts (round_id, version, agreement_hash, transaction_hash,
+          envelope_xdr, operation_count, max_time, created_at, state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED')
+      `).run(input.roundId, input.version, input.agreementHash, input.transactionHash,
+        input.envelopeXdr, input.operationCount, input.maxTime, now);
+      return { attempt: this.getSettlementByHash(input.transactionHash), reserved: true };
+    });
+  }
+
+  recordSettlementOutcome(hash: string, outcome: SettlementOutcome): SettlementAttempt {
+    return this.transaction(() => {
+      const attempt = this.getSettlementByHash(hash);
+      if (attempt.state === "SETTLED" || attempt.state === "FAILED") return attempt;
+      this.db.prepare(`
+        UPDATE settlement_attempts SET state = ?, detail = ?, ledger = ?, fee_atomic = ?
+        WHERE transaction_hash = ?
+      `).run(outcome.state, outcome.state === "RECONCILING" ? outcome.detail : null,
+        outcome.state === "RECONCILING" ? null : outcome.ledger,
+        outcome.state === "RECONCILING" ? null : outcome.feeAtomic, hash);
+      if (outcome.state === "SETTLED") {
+        const row = this.findVersion(attempt.roundId, attempt.version)!;
+        const agreement = this.decodeVersion(row);
+        const markSettled = this.db.prepare("INSERT INTO settled_obligations VALUES (?, ?)");
+        for (const { obligationId } of agreement.obligations) markSettled.run(obligationId, hash);
+        this.db.prepare("UPDATE rounds SET closed_at = ? WHERE id = ?").run(this.clock(), attempt.roundId);
+      }
+      return this.getSettlementByHash(hash);
+    });
+  }
+
+  private requireNoPendingSettlement(roundId: string): void {
+    if (this.db.prepare(`
+      SELECT 1 FROM settlement_attempts WHERE round_id = ? AND state IN ('SUBMITTED', 'RECONCILING')
+    `).get(roundId)) {
+      throw new AgreementError("INVALID_STATE", "Reconcile the existing settlement before changing the round");
+    }
+  }
+
+  private saveConsent(input: SyntheticConsent, signature?: string): AgreementView {
+    const { roundId, version, agreementHash, participantId, decision } = input;
+    const invalid = new AgreementError("INVALID_CONSENT", "Consent does not match an eligible agreement version");
+    if (typeof roundId !== "string" || !Number.isSafeInteger(version) || version < 1
+      || (decision !== "ACCEPT" && decision !== "REJECT")) throw invalid;
+
+    const result = this.transaction(() => {
+      const row = this.findVersion(roundId, version);
+      if (!row || row.hash !== agreementHash) return invalid;
+      const agreement = this.decodeVersion(row);
+      const now = this.clock();
+      const status = this.refreshStatus(row, agreement, now);
+      // Return eligibility failures inside the transaction so observed expiration is committed.
+      if (now >= agreement.consentBy || !agreement.participants.includes(participantId)) return invalid;
+      const account = agreement.accounts?.[participantId];
+      if (account ? signature === undefined || !verifiesConsent(account, { ...input, signature }, agreement.consentScheme)
+        : signature !== undefined) return invalid;
+      const latest = this.findVersion(roundId);
+      const round = this.db.prepare("SELECT closed_at FROM rounds WHERE id = ?").get(roundId);
+      if (round?.closed_at !== null || latest?.hash !== row.hash) return invalid;
+
+      const consents = this.readConsents(roundId, version);
+      const existing = consents.find((consent) => consent.participantId === participantId);
+      if (status === "CANCELLED") return invalid;
+      if (existing?.decision === decision) return this.view(agreement, row.hash, status, consents);
+      if (existing || status !== "PENDING_CONSENT") return invalid;
+
+      this.db.prepare(`
+        INSERT INTO synthetic_consents (round_id, version, agreement_hash, participant_id, decision, received_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(roundId, version, row.hash, participantId, decision, now);
+      if (signature !== undefined) {
+        this.db.prepare(`
+          INSERT INTO signed_consent_proofs (round_id, version, participant_id, signature) VALUES (?, ?, ?, ?)
+        `).run(roundId, version, participantId, signature);
+      }
+      const recorded = this.readConsents(roundId, version);
+      let nextStatus: VersionStatus = "PENDING_CONSENT";
+      if (decision === "REJECT") {
+        nextStatus = "REJECTED";
+      } else if (recorded.length === agreement.participants.length) {
+        nextStatus = agreement.payments.length === 0 ? "NET_ZERO" : "APPROVED";
+      }
+      if (nextStatus !== status) this.updateStatus(roundId, version, nextStatus);
+      return this.view(agreement, row.hash, nextStatus, recorded);
+    });
+    if (result instanceof AgreementError) throw result;
+    return result;
+  }
+
+  private transaction<T>(action: () => T, begin: "BEGIN" | "BEGIN IMMEDIATE" = "BEGIN IMMEDIATE"): T {
+    this.db.exec(begin);
+    try {
+      const result = action();
+      this.db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  private findVersion(roundId: string, version?: number): VersionRow | undefined {
+    return (version === undefined
+      ? this.db.prepare("SELECT payload, hash, status FROM agreement_versions WHERE round_id = ? ORDER BY version DESC LIMIT 1").get(roundId)
+      : this.db.prepare("SELECT payload, hash, status FROM agreement_versions WHERE round_id = ? AND version = ?").get(roundId, version)
+    ) as VersionRow | undefined;
+  }
+
+  private decodeVersion(row: VersionRow): FrozenAgreement {
+    if (createHash("sha256").update(row.payload, "utf8").digest("hex") !== row.hash) {
+      throw new AgreementError("INVALID_STATE", "Stored agreement does not match its hash");
+    }
+    return JSON.parse(row.payload) as FrozenAgreement;
+  }
+
+  private requireCurrent(roundId: string, expectedVersion: number | null) {
+    const round = this.db.prepare("SELECT closed_at FROM rounds WHERE id = ?").get(roundId);
+    if (!round) throw new AgreementError("NOT_FOUND", "Round not found");
+    if (round.closed_at !== null) throw new AgreementError("INVALID_STATE", "Round is closed");
+    const row = this.findVersion(roundId);
+    const agreement = row && this.decodeVersion(row);
+    if ((agreement?.version ?? null) !== expectedVersion) {
+      throw new AgreementError("VERSION_CONFLICT", "The current version changed");
+    }
+    return row && agreement ? { row, agreement } : undefined;
+  }
+
+  private readConsents(roundId: string, version: number): RecordedConsent[] {
+    return this.db.prepare(`
+      SELECT c.participant_id AS participantId, c.decision, c.received_at AS receivedAt,
+        c.agreement_hash AS agreementHash, p.signature
+      FROM synthetic_consents c LEFT JOIN signed_consent_proofs p USING (round_id, version, participant_id)
+      WHERE c.round_id = ? AND c.version = ? ORDER BY c.participant_id
+    `).all(roundId, version).map(({ participantId, decision, receivedAt, agreementHash, signature }) => ({
+      participantId: participantId as string,
+      decision: decision as ConsentDecision,
+      receivedAt: receivedAt as number,
+      ...(typeof signature === "string" ? { signature, agreementHash: agreementHash as string } : {}),
+    }));
+  }
+
+  private updateStatus(roundId: string, version: number, status: VersionStatus): void {
+    this.db.prepare("UPDATE agreement_versions SET status = ? WHERE round_id = ? AND version = ?")
+      .run(status, roundId, version);
+  }
+
+  private refreshStatus(row: VersionRow, agreement: FrozenAgreement, now: number, persist = true): VersionStatus {
+    if (row.status === "APPROVED" && this.findSettlementForVersion(agreement.roundId, agreement.version)) {
+      return row.status;
+    }
+    if ((row.status === "PENDING_CONSENT" && now >= agreement.consentBy)
+      || (row.status === "APPROVED" && now >= agreement.settleBy)) {
+      if (persist) this.updateStatus(agreement.roundId, agreement.version, "EXPIRED");
+      return "EXPIRED";
+    }
+    return row.status;
+  }
+
+  private view(
+    agreement: FrozenAgreement, hash: string, status: VersionStatus, consents: RecordedConsent[],
+  ): AgreementView {
+    return {
+      agreement, hash, status, consents,
+      validApprovalCount: isLive(status) ? consents.filter(({ decision }) => decision === "ACCEPT").length : 0,
+      canAdvance: status === "APPROVED"
+        && !this.findSettlementForVersion(agreement.roundId, agreement.version),
+    };
+  }
+}

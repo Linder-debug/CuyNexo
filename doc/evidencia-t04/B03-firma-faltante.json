@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "scenario": "B03-firma-faltante",
+  "network": "stellar-testnet",
+  "status": "verified",
+  "asset": "XLM",
+  "accounts": {
+    "A": {
+      "address": "GCUIEPOAHCJQYBXTDSYIPTWA25KFTNONG2FYLLQUVASZTMJ2NWADKIFG",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438524358524928"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438524358524928"
+      }
+    },
+    "B": {
+      "address": "GCKX3XO6EL4KASJKJKTHAGWBAJ2U7UGK2CCCPRFANR5AR5KXBTMZCCVF",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438528653492224"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438528653492224"
+      }
+    },
+    "C": {
+      "address": "GBLCVNTYGJUV6POZXU5ZKAK5LKOTF5DVLKOXLLELSBRJOHH26XA23ALO",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438532948459520"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438532948459520"
+      }
+    },
+    "D": {
+      "address": "GBBNIC6YGG3VZD2HNIL7NDEQXDD42UJTMGNVQB7HBAVF4K7ZDPFCIHBX",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438537243426816"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438537243426816"
+      }
+    }
+  },
+  "hash": "4981416e2b63971057b37f25aef51ad88f90a7aa334b1a4d0d9ab81cdaa615c2",
+  "included": false,
+  "successful": null,
+  "ledger": null,
+  "explorerUrl": null,
+  "feeChargedAtomic": "0",
+  "resultCodes": {
+    "transaction": "tx_failed",
+    "operations": [
+      "op_success",
+      "op_success",
+      "op_bad_auth"
+    ]
+  }
+}

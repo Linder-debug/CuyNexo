@@ -1,0 +1,96 @@
+{
+  "scenario": "B04",
+  "mode": "testnet",
+  "status": "testnet-verified",
+  "hash": "f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8",
+  "addresses": {
+    "A": "GD2OZL34EACFSLLBDLEM36IFDSQSF57U2VGSLFZ7DCQOUJBVCGPPBLSR",
+    "B": "GC2UERISR34SE44UYQ7JCO74L7UBFFXMSD3HVKVXQCC754KFGX7ILN6L",
+    "C": "GDO3CWTWQ5CMDLKVWNVJDJNGMLUVCIITKVJIKTATWAEV5OBU7YZQ6LJR",
+    "D": "GC5KHBGPPDOW2NUFMTQL4SSOIFZGJ7DGFT4VXFDGUBRTV6PC6XGZDBXF"
+  },
+  "before": {
+    "A": {
+      "balanceAtomic": "100000000000",
+      "sequence": "25438653207543808"
+    },
+    "B": {
+      "balanceAtomic": "100000000000",
+      "sequence": "25438657502511104"
+    },
+    "C": {
+      "balanceAtomic": "100000000000",
+      "sequence": "25438661797478400"
+    },
+    "D": {
+      "balanceAtomic": "100000000000",
+      "sequence": "25438666092445696"
+    }
+  },
+  "submission": {
+    "processId": 3350,
+    "requests": 2,
+    "submitCalls": 1,
+    "responseDiscarded": true,
+    "statuses": [
+      "RECONCILING",
+      "RECONCILING"
+    ]
+  },
+  "recovery": {
+    "processId": 3396,
+    "hash": "f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8",
+    "previousState": "RECONCILING",
+    "submitCalls": 0,
+    "state": "SETTLED",
+    "detail": null
+  },
+  "after": {
+    "A": {
+      "balanceAtomic": "99499999700",
+      "sequence": "25438653207543809"
+    },
+    "B": {
+      "balanceAtomic": "99900000000",
+      "sequence": "25438657502511104"
+    },
+    "C": {
+      "balanceAtomic": "100200000000",
+      "sequence": "25438661797478400"
+    },
+    "D": {
+      "balanceAtomic": "100400000000",
+      "sequence": "25438666092445696"
+    }
+  },
+  "operations": [
+    {
+      "from": "A",
+      "to": "C",
+      "xlm": "20.0000000"
+    },
+    {
+      "from": "A",
+      "to": "D",
+      "xlm": "30.0000000"
+    },
+    {
+      "from": "B",
+      "to": "D",
+      "xlm": "10.0000000"
+    }
+  ],
+  "sourceHashes": [
+    "f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8"
+  ],
+  "paymentDeltasAtomic": {
+    "A": "-500000000",
+    "B": "-100000000",
+    "C": "200000000",
+    "D": "400000000"
+  },
+  "successful": true,
+  "ledger": 5922902,
+  "feeAtomic": "300",
+  "explorerUrl": "https://stellar.expert/explorer/testnet/tx/f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8"
+}

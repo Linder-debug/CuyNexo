@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "scenario": "B02",
+  "network": "stellar-testnet",
+  "status": "verified",
+  "settlementState": "FAILED",
+  "asset": "XLM",
+  "accounts": {
+    "A": {
+      "address": "GDUUDTWHIZJHX3ACCRNY4HSX5Y3BGC5J2JO2MHE5JCUBRHEAHVX77GF6",
+      "before": {
+        "balanceAtomic": "99979999900",
+        "sequence": "25438627437740033"
+      },
+      "after": {
+        "balanceAtomic": "99979999600",
+        "sequence": "25438627437740034"
+      }
+    },
+    "B": {
+      "address": "GC5D3QEVLB64RAYPDU62LTZKSYE5MMB5N6LIDT57JUZYL7HZXSD3LKT2",
+      "before": {
+        "balanceAtomic": "20000000",
+        "sequence": "25438640322641920"
+      },
+      "after": {
+        "balanceAtomic": "20000000",
+        "sequence": "25438640322641920"
+      }
+    },
+    "C": {
+      "address": "GC7FPJGAUK66HUXF5G3I77VMRZRE7QRLFFT5A3KTH3HG4NL2XA3LW4EA",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438631732707328"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438631732707328"
+      }
+    },
+    "D": {
+      "address": "GDRZMYUB3PQAOP6GYVQKM7NWH32GFNJKIPQ7URE6BHOURL5KRXZ6AVFU",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438636027674624"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438636027674624"
+      }
+    }
+  },
+  "operations": [
+    {
+      "index": 1,
+      "source": "GDUUDTWHIZJHX3ACCRNY4HSX5Y3BGC5J2JO2MHE5JCUBRHEAHVX77GF6",
+      "destination": "GC7FPJGAUK66HUXF5G3I77VMRZRE7QRLFFT5A3KTH3HG4NL2XA3LW4EA",
+      "amountAtomic": "200000000",
+      "resultCode": "op_success",
+      "applied": false
+    },
+    {
+      "index": 2,
+      "source": "GDUUDTWHIZJHX3ACCRNY4HSX5Y3BGC5J2JO2MHE5JCUBRHEAHVX77GF6",
+      "destination": "GDRZMYUB3PQAOP6GYVQKM7NWH32GFNJKIPQ7URE6BHOURL5KRXZ6AVFU",
+      "amountAtomic": "300000000",
+      "resultCode": "op_success",
+      "applied": false
+    },
+    {
+      "index": 3,
+      "source": "GC5D3QEVLB64RAYPDU62LTZKSYE5MMB5N6LIDT57JUZYL7HZXSD3LKT2",
+      "destination": "GDRZMYUB3PQAOP6GYVQKM7NWH32GFNJKIPQ7URE6BHOURL5KRXZ6AVFU",
+      "amountAtomic": "100000000",
+      "resultCode": "op_underfunded",
+      "applied": false
+    }
+  ],
+  "hash": "a17b79d73a4ad0420ba1b3d9963cca4f88f510356b85a57b065a586ecb2b0886",
+  "explorerUrl": "https://stellar.expert/explorer/testnet/tx/a17b79d73a4ad0420ba1b3d9963cca4f88f510356b85a57b065a586ecb2b0886",
+  "ledger": 5922896,
+  "successful": false,
+  "feeAtomic": "300",
+  "feeAccount": "GDUUDTWHIZJHX3ACCRNY4HSX5Y3BGC5J2JO2MHE5JCUBRHEAHVX77GF6",
+  "resultCodes": {
+    "transaction": "tx_failed",
+    "operations": [
+      "op_success",
+      "op_success",
+      "op_underfunded"
+    ]
+  }
+}

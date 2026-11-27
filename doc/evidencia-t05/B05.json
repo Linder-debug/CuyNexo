@@ -1,0 +1,151 @@
+{
+  "scenario": "B05",
+  "scope": "same-three-residual-payments",
+  "observed": {
+    "success": {
+      "source": "observed-testnet",
+      "scenario": "B01",
+      "hash": "6052425d894e9d0f5b8708b4982594ee2daeb378b76967796d33a5eae914a803",
+      "ledger": 5922890,
+      "appliedOperations": 3,
+      "paymentDeltasAtomic": {
+        "A": "-500000000",
+        "B": "-100000000",
+        "C": "200000000",
+        "D": "400000000"
+      },
+      "settlementState": "SETTLED",
+      "feeAtomic": "300",
+      "resultCodes": null,
+      "submitToConfirmationMs": null
+    },
+    "failure": {
+      "source": "observed-testnet",
+      "scenario": "B02",
+      "hash": "a17b79d73a4ad0420ba1b3d9963cca4f88f510356b85a57b065a586ecb2b0886",
+      "ledger": 5922896,
+      "appliedOperations": 0,
+      "paymentDeltasAtomic": {
+        "A": "0",
+        "B": "0",
+        "C": "0",
+        "D": "0"
+      },
+      "settlementState": "FAILED",
+      "feeAtomic": "300",
+      "resultCodes": {
+        "transaction": "tx_failed",
+        "operations": [
+          "op_success",
+          "op_success",
+          "op_underfunded"
+        ]
+      },
+      "submitToConfirmationMs": null
+    }
+  },
+  "simulated": {
+    "success": {
+      "source": "simulation-local",
+      "transfers": [
+        {
+          "number": 1,
+          "debtorId": "A",
+          "creditorId": "C",
+          "amountAtomic": "200000000",
+          "state": "APPLIED"
+        },
+        {
+          "number": 2,
+          "debtorId": "A",
+          "creditorId": "D",
+          "amountAtomic": "300000000",
+          "state": "APPLIED"
+        },
+        {
+          "number": 3,
+          "debtorId": "B",
+          "creditorId": "D",
+          "amountAtomic": "100000000",
+          "state": "APPLIED"
+        }
+      ],
+      "appliedOperations": 3,
+      "paymentDeltasAtomic": {
+        "A": "-500000000",
+        "B": "-100000000",
+        "C": "200000000",
+        "D": "400000000"
+      },
+      "settlementState": "COMPLETE",
+      "feeAtomic": null,
+      "submitToConfirmationMs": null
+    },
+    "failure": {
+      "source": "simulation-local",
+      "transfers": [
+        {
+          "number": 1,
+          "debtorId": "A",
+          "creditorId": "C",
+          "amountAtomic": "200000000",
+          "state": "APPLIED"
+        },
+        {
+          "number": 2,
+          "debtorId": "A",
+          "creditorId": "D",
+          "amountAtomic": "300000000",
+          "state": "APPLIED"
+        },
+        {
+          "number": 3,
+          "debtorId": "B",
+          "creditorId": "D",
+          "amountAtomic": "100000000",
+          "state": "INSUFFICIENT_FUNDS"
+        }
+      ],
+      "appliedOperations": 2,
+      "paymentDeltasAtomic": {
+        "A": "-500000000",
+        "B": "0",
+        "C": "200000000",
+        "D": "300000000"
+      },
+      "settlementState": "PARTIAL",
+      "feeAtomic": null,
+      "submitToConfirmationMs": null
+    }
+  },
+  "recoveryObserved": {
+    "scenario": "B04",
+    "hash": "f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8",
+    "ledger": 5922902,
+    "feeAtomic": "300",
+    "clientResponseLoss": "injected",
+    "requests": 2,
+    "submitCalls": 1,
+    "stateBefore": "RECONCILING",
+    "stateAfter": "SETTLED",
+    "recoverySubmitCalls": 0,
+    "sourceHashes": [
+      "f9f35fa7281040f4678ed781ddcb71e56493b665ef82c97e4760649c66b0b8c8"
+    ],
+    "submitToConfirmationMs": null
+  },
+  "modeledActions": {
+    "atomic": {
+      "roundConsents": 4,
+      "envelopeSignatures": 2,
+      "sendInstructions": 1,
+      "resultRecords": 1
+    },
+    "independent": {
+      "roundConsents": 0,
+      "perTransferApprovals": 3,
+      "sendInstructions": 3,
+      "resultRecords": 3
+    }
+  }
+}

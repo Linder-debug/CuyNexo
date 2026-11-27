@@ -1,0 +1,33 @@
+{
+  "name": "cuynexo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test",
+    "demo:neteo": "npm run build && node scripts/demo-neteo.mjs",
+    "testnet:success": "npm run build && node scripts/stellar-testnet.mjs success",
+    "testnet:failure": "npm run build && node scripts/stellar-testnet.mjs failure",
+    "testnet:reconcile": "npm run build && node scripts/reconcile-testnet.mjs",
+    "testnet:b04": "npm run build && node scripts/stellar-b04.mjs",
+    "testnet:b03": "npm run build && node scripts/stellar-b03.mjs",
+    "demo:web": "npm run build && node scripts/t05-web.mjs",
+    "demo:b05": "npm run --silent build && node scripts/b05.mjs",
+    "p0:web": "npm run build && node scripts/operative-web.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@fontsource/archivo": "5.3.0",
+    "@fontsource/pt-sans": "5.3.0",
+    "@fontsource/source-code-pro": "5.3.1",
+    "@stellar/stellar-sdk": "16.4.1",
+    "@stellar/varial-sdk": "7.0.0"
+  }
+}

@@ -1,6 +1,6 @@
 # Arquitectura de CuyNexo
 
-**Estado:** propuesta de diseño basada en el plan v0.3. G0 sigue abierto.  
+**Estado:** base técnica aprobada según el plan v0.3. Motor local, persistencia, adaptador clásico con Ed25519 y reconciliación disponibles para revisión. Los siguientes componentes describen el diseño del P0.
 **Proyecto:** CuyNexo · Stellar Codember Perú 2026
 
 CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los pagos residuales como una sola transacción clásica de Stellar. El objetivo del prototipo es demostrar un cálculo reproducible, una liquidación conjunta y una confirmación verificable en testnet. [Ver diagrama de arquitectura](./diagrama-arquitectura.md).
@@ -9,13 +9,13 @@ CuyNexo propone compensar obligaciones entre empresas ficticias y liquidar los p
 
 | Estado | Alcance |
 |---|---|
-| **Confirmado** | El nombre es CuyNexo y el equipo está formado por Linder y Gonza. La v0.3 es la referencia para revisar el diseño. El desarrollo depende del acuerdo G0. |
-| **Propuesto** | Una ronda activa por instalación local, datos sintéticos de 3 a 8 participantes, XLM de Stellar testnet, motor determinista, consentimiento verificable fuera de cadena, una transacción clásica por intento autorizado y un verificador separado. La demo base usa cuatro participantes y tres pagos. |
-| **Pendiente** | Aprobar G0, confirmar lenguaje y SDK, acceso a Horizon, persistencia local, alcance de la interfaz y reparto de trabajo. Confirmar las reglas de autorización, caducidad y compensación entre grupos de obligaciones desconectados. La ejecución y la evidencia de testnet están pendientes. |
+| **Confirmado** | La base aprobada usa una ronda local con datos sintéticos, TypeScript, SQLite y Horizon testnet. El caso base requiere cuatro consentimientos fuera de cadena y dos firmas de pago en una transacción clásica de Stellar. |
+| **Disponible en esta rama** | Motor determinista, SQLite para rondas y versiones, hash del acuerdo y control local de unanimidad. La demo usa cuatro empresas y tres pagos residuales. T03 añade comprobación Ed25519 y XDR clásico con dos firmas. Ver [A01–A03](resultados-neteo-a01-a03.md), [T02](resultados-t02.md) y [T03](resultados-t03.md). T04 añade el intento único persistente y la [reconciliación local por hash](resultados-t04.md). |
+| **Pendiente** | Vista local, comparación y B04 en testnet. El registro histórico documenta los resultados de B01 y B02. |
 
-TypeScript con Node.js, SQLite y Horizon testnet figuran como propuesta de referencia en la v0.3. Rust y Python siguen en evaluación. El criterio para elegir SDK es poder formar una transacción clásica con distintas fuentes de pago, reunir firmas sobre el mismo cuerpo, enviarla y comprobarla por hash. Soroban se reconsideraría si surge una regla persistente en cadena que Stellar clásico no pueda cubrir.
+El [registro de decisiones](../decisions.md) identifica lo aprobado. Soroban se reconsideraría si surge una regla persistente en cadena que Stellar clásico no pueda cubrir.
 
-## Componentes y responsabilidades propuestas
+## Componentes y responsabilidades del diseño
 
 | Componente | Responsabilidad |
 |---|---|
@@ -32,11 +32,11 @@ TypeScript con Node.js, SQLite y Horizon testnet figuran como propuesta de refer
 2. **Consentir.** Cada participante acepta o rechaza esa versión. En el caso base, la aplicación verifica cuatro consentimientos. Un rechazo bloquea la preparación. Con unanimidad y un neto de cero, se registra el resultado sin envío.
 3. **Firmar.** A y B firman el mismo cuerpo de la transacción en sesiones separadas. A es la fuente de la transacción del caso base y aporta secuencia y comisión. Stellar comprueba las firmas de las cuentas fuente. Los consentimientos de C y D los verifica la aplicación.
 4. **Persistir y enviar.** El coordinador guarda el intento antes del envío. Si cambia el contenido del acuerdo o se necesita sustituir el sobre, se inicia un nuevo ciclo de autorización cuando el intento previo se haya resuelto.
-5. **Reconciliar.** El verificador contrasta la respuesta de red con las operaciones esperadas. Un timeout o una consulta sin resultado deja el intento en revisión. Se consulta primero el mismo hash. Si procede otro envío dentro de la vigencia, se reutiliza exactamente el mismo sobre. Una solicitud de cancelación tras reunir todas las firmas queda sujeta a la vigencia y al estado del intento.
+5. **Reconciliar.** El verificador contrasta la respuesta de red con las operaciones esperadas. Un timeout o una consulta sin resultado deja el intento en revisión. Se consulta primero el mismo hash. El plan permite reutilizar exactamente el mismo sobre dentro de su vigencia. La implementación T04 consulta por hash sin reenvío automático. Una solicitud de cancelación tras reunir todas las firmas queda sujeta a la vigencia y al estado del intento.
 
 La aplicación administra las versiones y los consentimientos. El coordinador opera con claves públicas y firmas, mientras los fondos permanecen en las cuentas pagadoras hasta que Stellar aplica los pagos. El resultado confirmado y su evidencia se obtienen de la red. [Operaciones y transacciones de Stellar](https://developers.stellar.org/docs/learn/fundamentals/transactions/operations-and-transactions).
 
-## Caso de referencia y evidencia esperada
+## Caso de referencia y evidencia
 
 | Obligaciones sintéticas | Saldos netos | Pagos residuales |
 |---|---|---|
@@ -46,11 +46,11 @@ El caso pasa de **320 unidades brutas a 60 unidades en pagos residuales**. El 81
 
 | Prueba prevista | Criterio de aceptación |
 |---|---|
-| **Neteo** | Se obtienen los tres pagos esperados y se conserva el saldo neto de cada participante. |
+| **Neteo** | La ejecución local obtuvo los tres pagos esperados y conservó el saldo de cada participante. Ver [A01–A03](resultados-neteo-a01-a03.md). |
 | **Liquidación exitosa** | La red confirma un único hash con las tres operaciones y los importes previstos. |
 | **Fallo de la última operación** | B tiene saldo transferible insuficiente, pese a que el sobre reúne ambas firmas. Quedan cero pagos aplicados. Si corresponde, registrar la comisión y el consumo de secuencia por separado. |
 | **Autorización** | Un rechazo del acuerdo impide preparar el envío. Una firma requerida de pago ausente impide la liquidación en Stellar. |
 | **Respuesta perdida** | Se recupera el estado a partir del hash guardado, sin crear una segunda liquidación. |
 | **Comparación** | Se documenta qué aporta el flujo frente a transferencias independientes y qué queda por validar con usuarios. |
 
-Los artefactos públicos de prueba usarán datos sintéticos y evidencia revisada. La exportación excluirá semillas, claves privadas, credenciales y sobres firmados aún utilizables. Los resultados de testnet, los beneficios operativos y la aplicabilidad comercial siguen por comprobar.
+Los artefactos públicos de prueba usarán datos sintéticos y evidencia revisada. La exportación excluirá semillas, claves privadas, credenciales y sobres firmados aún utilizables. B01 y B02 en testnet constan en el [registro histórico](evidencia-t03/registro-ejecuciones.md). La validación de B04 en testnet y los beneficios operativos siguen pendientes.

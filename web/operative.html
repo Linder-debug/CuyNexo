@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CuyNexo · Tesorería</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <img src="/logo.png" alt="CuyNexo" /><strong
+        >Simulación local · pagos sin conexión a la red</strong
+      ><span id="identity"></span><button id="logout">Salir</button>
+    </header>
+    <main>
+      <aside>Prototipo de diseño · No constituye evidencia de ejecución</aside>
+      <section id="access">
+        <h1>Acceso a la ronda</h1>
+        <div class="grid">
+          <article class="entry">
+            <h2>Coordinación de la ronda</h2>
+            <p>
+              Carga las obligaciones, prepara el acuerdo y verifica el
+              resultado.
+            </p>
+            <button id="openAdmin">Entrar como coordinador</button>
+          </article>
+          <article class="entry">
+            <h2>Empresa participante</h2>
+            <p>
+              Revisa tu importe, decide sobre la versión y firma si te
+              corresponde.
+            </p>
+            <button id="openCompany">Entrar como empresa</button>
+          </article>
+          <dialog id="adminDialog">
+            <h2>Entrar como coordinador</h2>
+            <label>Código de uso único<input id="code" type="password" /></label
+            ><button id="admin">Entrar</button
+            ><button class="back">Volver</button>
+            <p role="alert"></p>
+          </dialog>
+          <dialog id="companyDialog">
+            <h2>Identificarme como empresa</h2>
+            <label
+              >Empresa asignada<input id="company" placeholder="A"
+            /></label>
+            <p>
+              Varial te pedirá firmar el desafío de acceso con la dirección
+              asignada a tu empresa.
+            </p>
+            <button id="login">Identificarse con Varial</button
+            ><button class="back">Volver</button>
+            <p role="alert"></p>
+          </dialog>
+        </div>
+      </section>
+      <div id="workspace" hidden>
+        <nav aria-label="Etapas">
+          <a href="#ob">Obligaciones</a><a href="#ac">Acuerdo</a
+          ><a href="#au">Autorizaciones</a><a href="#re">Resultado</a>
+        </nav>
+        <div class="roundbar">
+          <div>
+            <b>Siguiente paso</b>
+            <p id="nextAction"></p>
+          </div>
+          <button id="refresh">Actualizar vista</button>
+        </div>
+        <section id="ob">
+          <h2>Obligaciones</h2>
+          <div class="metrics" id="metrics" hidden>
+            <div>Obligaciones brutas<strong id="gross"></strong></div>
+            <div>Pagos después del neteo<strong id="residual"></strong></div>
+            <div>Empresas<strong id="count"></strong></div>
+          </div>
+          <div id="editor">
+            <p>Registra deudas entre 3 y 8 empresas.</p>
+            <button id="fixture">Cargar ejemplo de cuatro empresas</button>
+            <label
+              >Empresas participantes, separadas por comas<input
+                id="members"
+                value="A, B, C"
+            /></label>
+            <div id="rows"></div>
+            <button id="add">Agregar obligación</button
+            ><button id="calculate">Calcular acuerdo</button>
+          </div>
+          <div class="report" id="summary"></div>
+        </section>
+        <section id="ac" hidden>
+          <h2>Acuerdo</h2>
+          <div id="setup">
+            <fieldset>
+              <legend>Vínculos de direcciones</legend>
+              <div id="accounts" class="grid"></div>
+              <label
+                >Empresa que paga la comisión<select
+                  id="source"
+                ></select></label
+              ><label
+                >Minutos para decidir<input
+                  id="minutes"
+                  type="number"
+                  min="1"
+                  value="15" /></label
+              ><button id="freeze">Congelar versión</button>
+            </fieldset>
+          </div>
+          <div id="agreement" class="report"></div>
+          <div id="impact" class="report"></div>
+          <details>
+            <summary>Detalle del acuerdo</summary>
+            <div class="report" id="detail"></div>
+          </details>
+          <button id="accept">Revisar y aceptar</button
+          ><button id="reject">Rechazar</button
+          ><button id="cancel">Cancelar esta versión</button
+          ><button id="newVersion">Preparar nueva versión</button>
+        </section>
+        <section id="au" hidden>
+          <h2>Autorizaciones</h2>
+          <div class="report" id="auth"></div>
+          <button id="prepare">Preparar pagos para firma</button
+          ><button id="partial">Revisar y firmar pagos</button>
+        </section>
+        <section id="re" hidden>
+          <h2>Resultado</h2>
+          <div class="report" id="result"></div>
+          <button id="submit">Enviar al simulador</button
+          ><button id="lookup">Verificar resultado</button
+          ><button id="retry">Reintentar el mismo intento</button>
+          <details>
+            <summary>Detalle de verificación</summary>
+            <div class="report" id="verified"></div>
+          </details>
+          <details>
+            <summary>Expediente y archivo</summary>
+            <button id="download">Descargar evidencia de la ronda</button>
+            <div id="evidencePreview" class="report"></div>
+            <h3>Archivo histórico</h3>
+            <div id="archiveIndex">
+              <button id="w01">W01 · Ronda anterior en testnet</button
+              ><button id="b05">B05 · Transferencias independientes</button>
+            </div>
+            <article id="archivePanel" hidden>
+              <h3 id="archiveTitle"></h3>
+              <p id="archiveText"></p>
+              <button id="archiveBack">Volver al índice</button>
+            </article>
+            <button id="roundBack">Volver a la ronda</button>
+          </details>
+        </section>
+      </div>
+      <dialog id="rowDialog">
+        <form id="rowForm">
+          <h2>Fila de obligación</h2>
+          <label>Empresa deudora<select id="from"></select></label
+          ><label>Empresa acreedora<select id="to"></select></label
+          ><label
+            >Importe en XLM<input id="value" required inputmode="decimal"
+          /></label>
+          <p id="rowError" role="alert"></p>
+          <button>Guardar obligación</button
+          ><button type="button" id="back">Volver</button>
+        </form>
+      </dialog>
+      <p role="status" id="notice"></p>
+    </main>
+    <script src="/wallet.js"></script>
+    <script src="/ui.js"></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "scenario": "B03-sobre-vencido",
+  "network": "stellar-testnet",
+  "status": "verified",
+  "asset": "XLM",
+  "accounts": {
+    "A": {
+      "address": "GBNFYS2HORFJTCSEH7BPFW5GPQBRKOZM57ZJKCKS4MMCVF3RSV5XVYXX",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438558718263296"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438558718263296"
+      }
+    },
+    "B": {
+      "address": "GCFNUXDARTPQWUG3P7I3WPUPDPAXI42YDXDNREJ2BHSR23N2IXPNZMVV",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438563013230592"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438563013230592"
+      }
+    },
+    "C": {
+      "address": "GD2SQBTP34Z4XBGSL7XCHXWSZUCNRZWJLUELQJVTDWIMIXJ7S4IVRYC6",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438567308197888"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438567308197888"
+      }
+    },
+    "D": {
+      "address": "GA6ICGWBRYMF35LHTORN45HD7MOBRQZG7WEUQWVV2FOLNTMUUUEDG7TE",
+      "before": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438571603165184"
+      },
+      "after": {
+        "balanceAtomic": "100000000000",
+        "sequence": "25438571603165184"
+      }
+    }
+  },
+  "hash": "c4d888727d1c7facaea6a275b98dfa38303e2e1ac4c064926bec15f63bca0bb1",
+  "included": false,
+  "successful": null,
+  "ledger": null,
+  "explorerUrl": null,
+  "feeChargedAtomic": "0",
+  "resultCodes": {
+    "transaction": "tx_too_late",
+    "operations": []
+  }
+}
